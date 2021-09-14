@@ -16,7 +16,17 @@ contract Blueprint is
     uint256 public defaultPlatformSecondarySalePercentage;
 
     address public asyncSaleFeesRecipient;
-    mapping(uint256 => address) public blueprintArtist;
+    mapping(uint256 => Blueprint) public blueprints;
+    uint256 public blueprintIndex;
+
+    struct Blueprint {
+        address artist;
+        uint256 capacity;
+        uint256 price;
+        address ERC20Token;
+        string randomSeedSigHash;
+        string baseTokenUri;
+    }
 
     bytes32 public constant OPERATOR_ROLE = keccak256("OPERATOR_ROLE");
 
@@ -36,6 +46,36 @@ contract Blueprint is
         defaultPlatformSecondarySalePercentage = 500; //5%
 
         asyncSaleFeesRecipient = msg.sender;
+    }
+
+    function prepareBlueprint(
+        address _artist,
+        uint256 _capacity,
+        uint256 _price,
+        address _erc20Token,
+        string memory _randomSeedSigHash,
+        string memory _baseTokenUri
+    ) external onlyRole(DEFAULT_ADMIN_ROLE) {
+        uint256 _blueprintIndex = blueprintIndex;
+        blueprints[_blueprintIndex].artist = _artist;
+        blueprints[_blueprintIndex].capacity = _capacity;
+        blueprints[_blueprintIndex].price = _price;
+        if (_erc20Token != address(0)) {
+            blueprints[_blueprintIndex].ERC20Token = _erc20Token;
+        }
+        blueprints[_blueprintIndex].randomSeedSigHash = _randomSeedSigHash;
+        blueprints[_blueprintIndex].baseTokenUri = _baseTokenUri;
+
+        //        - platformOnly
+        // -feeRecipients
+        // -feeBPS
+        // -capacity
+        // -priceAmount
+        // -priceCurrency (ETH or ERC20)
+        // -randomSeedSignatureHash
+        // -baseTokenURI
+        // -whitelistedPresalesMerkleroot
+        // @Return blueprintID
     }
 
     ////////////////////////////////////
@@ -90,7 +130,7 @@ contract Blueprint is
     {
         address payable[] memory feeRecipients = new address payable[](2);
         feeRecipients[0] = payable(asyncSaleFeesRecipient);
-        feeRecipients[1] = payable(blueprintArtist[id]);
+        feeRecipients[1] = payable(blueprints[id].artist);
 
         return feeRecipients;
     }
