@@ -14,6 +14,7 @@ contract Blueprint is
 {
     uint256 public defaultBlueprintSecondarySalePercentage;
     uint256 public defaultPlatformSecondarySalePercentage;
+    uint256 public latestErc721TokenIndex;
 
     address public asyncSaleFeesRecipient;
     mapping(uint256 => Blueprint) public blueprints;
@@ -23,9 +24,11 @@ contract Blueprint is
         address artist;
         uint256 capacity;
         uint256 price;
+        uint256 erc721TokenIndex;
         address ERC20Token;
         string randomSeedSigHash;
         string baseTokenUri;
+        uint8 saleState; //0 for not started, 1 for started, 2 for paused
     }
 
     bytes32 public constant OPERATOR_ROLE = keccak256("OPERATOR_ROLE");
@@ -65,6 +68,7 @@ contract Blueprint is
         }
         blueprints[_blueprintIndex].randomSeedSigHash = _randomSeedSigHash;
         blueprints[_blueprintIndex].baseTokenUri = _baseTokenUri;
+        blueprintIndex++;
 
         //        - platformOnly
         // -feeRecipients
@@ -76,6 +80,31 @@ contract Blueprint is
         // -baseTokenURI
         // -whitelistedPresalesMerkleroot
         // @Return blueprintID
+    }
+
+    function beginSale(uint256 blueprintID)
+        external
+        onlyRole(DEFAULT_ADMIN_ROLE)
+    {
+        require(blueprints[_blueprintIndex].artist != address(0));
+        if (blueprints[_blueprintIndex].saleStarted == 0) {
+            blueprints[_blueprintIndex].saleStarted = 1;
+            //assign the erc721 token index to the blueprint
+            blueprints[_blueprintIndex]
+                .erc721TokenIndex = latestErc721TokenIndex;
+            latestErc721TokenIndex += (blueprints[_blueprintIndex].capacity -
+                1);
+        }
+    }
+
+    function pauseSale(uint256 bluePrintID)
+        external
+        onlyRole(DEFAULT_ADMIN_ROLE)
+    {
+        require(blueprints[_blueprintIndex].artist != address(0));
+        if (blueprints[_blueprintIndex].saleStarted == 1) {
+            blueprints[_blueprintIndex].saleStarted = 2;
+        }
     }
 
     ////////////////////////////////////
