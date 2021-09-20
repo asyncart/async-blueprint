@@ -21,6 +21,7 @@ contract Blueprint is
     uint256 public blueprintIndex;
 
     enum SaleState {
+        not_prepared,
         not_started,
         started,
         paused
@@ -35,6 +36,14 @@ contract Blueprint is
         string baseTokenUri;
         SaleState saleState;
         //0 for not started, 1 for started, 2 for paused
+    }
+
+    modifier isBlueprintPrepared(uint256 _blueprintID) {
+        require(
+            blueprints[_blueprintID].saleState != SaleState.not_prepared,
+            "blueprint not prepared"
+        );
+        _;
     }
 
     bytes32 public constant OPERATOR_ROLE = keccak256("OPERATOR_ROLE");
@@ -94,28 +103,39 @@ contract Blueprint is
         external
         onlyRole(DEFAULT_ADMIN_ROLE)
     {
-        require(
-            blueprints[blueprintID].artist != address(0),
-            "Blueprint not created"
-        );
-        require(
-            blueprints[blueprintID].saleState == SaleState.not_started,
-            "Sale already started"
-        );
+        require(blueprints[blueprintID].saleState == SaleState.not_started);
         blueprints[blueprintID].saleState = SaleState.started;
         //assign the erc721 token index to the blueprint
         blueprints[blueprintID].erc721TokenIndex = latestErc721TokenIndex;
         latestErc721TokenIndex += (blueprints[blueprintID].capacity);
     }
 
-    function pauseSale(uint256 bluePrintID)
+    function pauseSale(uint256 blueprintID)
         external
         onlyRole(DEFAULT_ADMIN_ROLE)
     {
-        require(blueprints[bluePrintID].artist != address(0));
-        if (blueprints[bluePrintID].saleState == SaleState.not_started) {
-            blueprints[bluePrintID].saleState = SaleState.started;
+        require(
+            blueprints[blueprintID].saleState == SaleState.started,
+            "Sale not started"
+        );
+        {
+            blueprints[blueprintID].saleState = SaleState.paused;
         }
+    }
+
+    function unpauseSale(uint256 blueprintID)
+        external
+        onlyRole(DEFAULT_ADMIN_ROLE)
+    {
+        require(blueprints[blueprintID].saleState == SaleState.paused);
+        blueprints[blueprintID].saleState = SaleState.started;
+    }
+
+    function updateBaseTokenUri(
+        uint256 blueprintID,
+        string memory newBaseTokenUri
+    ) external onlyRole(DEFAULT_ADMIN_ROLE) isBlueprintPrepared(blueprintID) {
+        blueprints[blueprintID].baseTokenUri = newBaseTokenUri;
     }
 
     ////////////////////////////////////
