@@ -20,6 +20,12 @@ contract Blueprint is
     mapping(uint256 => Blueprint) public blueprints;
     uint256 public blueprintIndex;
 
+    enum SaleState {
+        not_prepared,
+        not_started,
+        started,
+        paused
+    }
     struct Blueprint {
         address artist;
         uint256 capacity;
@@ -28,7 +34,16 @@ contract Blueprint is
         address ERC20Token;
         string randomSeedSigHash;
         string baseTokenUri;
-        uint8 saleState; //0 for not started, 1 for started, 2 for paused
+        SaleState saleState;
+        //0 for not started, 1 for started, 2 for paused
+    }
+
+    modifier isBlueprintPrepared(uint256 _blueprintID) {
+        require(
+            blueprints[_blueprintID].saleState != SaleState.not_prepared,
+            "blueprint not prepared"
+        );
+        _;
     }
 
     bytes32 public constant OPERATOR_ROLE = keccak256("OPERATOR_ROLE");
@@ -47,6 +62,8 @@ contract Blueprint is
 
         defaultBlueprintSecondarySalePercentage = 1000; // 10%
         defaultPlatformSecondarySalePercentage = 500; //5%
+        //TODO Should tokenID start at 0 or 1?
+        //latestErc721TokenIndex =1;
 
         asyncSaleFeesRecipient = msg.sender;
     }
@@ -59,15 +76,15 @@ contract Blueprint is
         string memory _randomSeedSigHash,
         string memory _baseTokenUri
     ) external onlyRole(DEFAULT_ADMIN_ROLE) {
-        uint256 _blueprintIndex = blueprintIndex;
-        blueprints[_blueprintIndex].artist = _artist;
-        blueprints[_blueprintIndex].capacity = _capacity;
-        blueprints[_blueprintIndex].price = _price;
+        uint256 _blueprintID = blueprintIndex;
+        blueprints[_blueprintID].artist = _artist;
+        blueprints[_blueprintID].capacity = _capacity;
+        blueprints[_blueprintID].price = _price;
         if (_erc20Token != address(0)) {
-            blueprints[_blueprintIndex].ERC20Token = _erc20Token;
+            blueprints[_blueprintID].ERC20Token = _erc20Token;
         }
-        blueprints[_blueprintIndex].randomSeedSigHash = _randomSeedSigHash;
-        blueprints[_blueprintIndex].baseTokenUri = _baseTokenUri;
+        blueprints[_blueprintID].randomSeedSigHash = _randomSeedSigHash;
+        blueprints[_blueprintID].baseTokenUri = _baseTokenUri;
         blueprintIndex++;
 
         //        - platformOnly
@@ -86,25 +103,39 @@ contract Blueprint is
         external
         onlyRole(DEFAULT_ADMIN_ROLE)
     {
-        require(blueprints[_blueprintIndex].artist != address(0));
-        if (blueprints[_blueprintIndex].saleStarted == 0) {
-            blueprints[_blueprintIndex].saleStarted = 1;
-            //assign the erc721 token index to the blueprint
-            blueprints[_blueprintIndex]
-                .erc721TokenIndex = latestErc721TokenIndex;
-            latestErc721TokenIndex += (blueprints[_blueprintIndex].capacity -
-                1);
-        }
+        require(blueprints[blueprintID].saleState == SaleState.not_started);
+        blueprints[blueprintID].saleState = SaleState.started;
+        //assign the erc721 token index to the blueprint
+        blueprints[blueprintID].erc721TokenIndex = latestErc721TokenIndex;
+        latestErc721TokenIndex += (blueprints[blueprintID].capacity);
     }
 
-    function pauseSale(uint256 bluePrintID)
+    function pauseSale(uint256 blueprintID)
         external
         onlyRole(DEFAULT_ADMIN_ROLE)
     {
-        require(blueprints[_blueprintIndex].artist != address(0));
-        if (blueprints[_blueprintIndex].saleStarted == 1) {
-            blueprints[_blueprintIndex].saleStarted = 2;
+        require(
+            blueprints[blueprintID].saleState == SaleState.started,
+            "Sale not started"
+        );
+        {
+            blueprints[blueprintID].saleState = SaleState.paused;
         }
+    }
+
+    function unpauseSale(uint256 blueprintID)
+        external
+        onlyRole(DEFAULT_ADMIN_ROLE)
+    {
+        require(blueprints[blueprintID].saleState == SaleState.paused);
+        blueprints[blueprintID].saleState = SaleState.started;
+    }
+
+    function updateBaseTokenUri(
+        uint256 blueprintID,
+        string memory newBaseTokenUri
+    ) external onlyRole(DEFAULT_ADMIN_ROLE) isBlueprintPrepared(blueprintID) {
+        blueprints[blueprintID].baseTokenUri = newBaseTokenUri;
     }
 
     ////////////////////////////////////
