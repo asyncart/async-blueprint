@@ -20,6 +20,11 @@ contract Blueprint is
     mapping(uint256 => Blueprint) public blueprints;
     uint256 public blueprintIndex;
 
+    enum SaleState {
+        not_started,
+        started,
+        paused
+    }
     struct Blueprint {
         address artist;
         uint256 capacity;
@@ -28,7 +33,8 @@ contract Blueprint is
         address ERC20Token;
         string randomSeedSigHash;
         string baseTokenUri;
-        uint8 saleState; //0 for not started, 1 for started, 2 for paused
+        SaleState saleState;
+        //0 for not started, 1 for started, 2 for paused
     }
 
     bytes32 public constant OPERATOR_ROLE = keccak256("OPERATOR_ROLE");
@@ -86,14 +92,12 @@ contract Blueprint is
         external
         onlyRole(DEFAULT_ADMIN_ROLE)
     {
-        require(blueprints[_blueprintIndex].artist != address(0));
-        if (blueprints[_blueprintIndex].saleStarted == 0) {
-            blueprints[_blueprintIndex].saleStarted = 1;
+        require(blueprints[blueprintID].artist != address(0));
+        if (blueprints[blueprintID].saleState == SaleState.not_started) {
+            blueprints[blueprintID].saleState = SaleState.started;
             //assign the erc721 token index to the blueprint
-            blueprints[_blueprintIndex]
-                .erc721TokenIndex = latestErc721TokenIndex;
-            latestErc721TokenIndex += (blueprints[_blueprintIndex].capacity -
-                1);
+            blueprints[blueprintID].erc721TokenIndex = latestErc721TokenIndex;
+            latestErc721TokenIndex += (blueprints[blueprintID].capacity - 1);
         }
     }
 
@@ -101,9 +105,9 @@ contract Blueprint is
         external
         onlyRole(DEFAULT_ADMIN_ROLE)
     {
-        require(blueprints[_blueprintIndex].artist != address(0));
-        if (blueprints[_blueprintIndex].saleStarted == 1) {
-            blueprints[_blueprintIndex].saleStarted = 2;
+        require(blueprints[bluePrintID].artist != address(0));
+        if (blueprints[bluePrintID].saleState == SaleState.not_started) {
+            blueprints[bluePrintID].saleState = SaleState.started;
         }
     }
 
