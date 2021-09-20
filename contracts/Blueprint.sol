@@ -53,6 +53,8 @@ contract Blueprint is
 
         defaultBlueprintSecondarySalePercentage = 1000; // 10%
         defaultPlatformSecondarySalePercentage = 500; //5%
+        //TODO Should tokenID start at 0 or 1?
+        //latestErc721TokenIndex =1;
 
         asyncSaleFeesRecipient = msg.sender;
     }
@@ -65,15 +67,15 @@ contract Blueprint is
         string memory _randomSeedSigHash,
         string memory _baseTokenUri
     ) external onlyRole(DEFAULT_ADMIN_ROLE) {
-        uint256 _blueprintIndex = blueprintIndex;
-        blueprints[_blueprintIndex].artist = _artist;
-        blueprints[_blueprintIndex].capacity = _capacity;
-        blueprints[_blueprintIndex].price = _price;
+        uint256 _blueprintID = blueprintIndex;
+        blueprints[_blueprintID].artist = _artist;
+        blueprints[_blueprintID].capacity = _capacity;
+        blueprints[_blueprintID].price = _price;
         if (_erc20Token != address(0)) {
-            blueprints[_blueprintIndex].ERC20Token = _erc20Token;
+            blueprints[_blueprintID].ERC20Token = _erc20Token;
         }
-        blueprints[_blueprintIndex].randomSeedSigHash = _randomSeedSigHash;
-        blueprints[_blueprintIndex].baseTokenUri = _baseTokenUri;
+        blueprints[_blueprintID].randomSeedSigHash = _randomSeedSigHash;
+        blueprints[_blueprintID].baseTokenUri = _baseTokenUri;
         blueprintIndex++;
 
         //        - platformOnly
@@ -92,13 +94,18 @@ contract Blueprint is
         external
         onlyRole(DEFAULT_ADMIN_ROLE)
     {
-        require(blueprints[blueprintID].artist != address(0));
-        if (blueprints[blueprintID].saleState == SaleState.not_started) {
-            blueprints[blueprintID].saleState = SaleState.started;
-            //assign the erc721 token index to the blueprint
-            blueprints[blueprintID].erc721TokenIndex = latestErc721TokenIndex;
-            latestErc721TokenIndex += (blueprints[blueprintID].capacity - 1);
-        }
+        require(
+            blueprints[blueprintID].artist != address(0),
+            "Blueprint not created"
+        );
+        require(
+            blueprints[blueprintID].saleState == SaleState.not_started,
+            "Sale already started"
+        );
+        blueprints[blueprintID].saleState = SaleState.started;
+        //assign the erc721 token index to the blueprint
+        blueprints[blueprintID].erc721TokenIndex = latestErc721TokenIndex;
+        latestErc721TokenIndex += (blueprints[blueprintID].capacity);
     }
 
     function pauseSale(uint256 bluePrintID)
