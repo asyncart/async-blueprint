@@ -4,6 +4,7 @@ pragma solidity 0.8.4;
 import "@openzeppelin/contracts-upgradeable/token/ERC721/ERC721Upgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/access/AccessControlEnumerableUpgradeable.sol";
 import "./abstract/HasSecondarySaleFees.sol";
+import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 
 import "hardhat/console.sol";
 
@@ -42,6 +43,14 @@ contract Blueprint is
         require(
             blueprints[_blueprintID].saleState != SaleState.not_prepared,
             "blueprint not prepared"
+        );
+        _;
+    }
+
+    modifier hasSaleStarted(uint256 _blueprintID) {
+        require(
+            blueprints[_blueprintID].saleState == SaleState.started,
+            "Sale not started"
         );
         _;
     }
@@ -114,14 +123,9 @@ contract Blueprint is
     function pauseSale(uint256 blueprintID)
         external
         onlyRole(DEFAULT_ADMIN_ROLE)
+        hasSaleStarted(blueprintID)
     {
-        require(
-            blueprints[blueprintID].saleState == SaleState.started,
-            "Sale not started"
-        );
-        {
-            blueprints[blueprintID].saleState = SaleState.paused;
-        }
+        blueprints[blueprintID].saleState = SaleState.paused;
     }
 
     function unpauseSale(uint256 blueprintID)
@@ -130,6 +134,44 @@ contract Blueprint is
     {
         require(blueprints[blueprintID].saleState == SaleState.paused);
         blueprints[blueprintID].saleState = SaleState.started;
+    }
+
+    function purchaseBlueprints(
+        uint256 blueprintID,
+        uint256 quantity,
+        uint256 tokenAmount
+    ) external payable hasSaleStarted(blueprintID) {
+        //TODO check if msg.sender is whitelisted
+        address _erc20Token = blueprints[blueprintID].ERC20Token;
+        require(blueprints[blueprintID].capacity >= quantity);
+        if (_erc20Token == address(0)) {
+            require(tokenAmount == 0, "cannot specify token amount");
+            require(
+                msg.value == quantity * blueprints[blueprintID].price,
+                "Purchase amount too low"
+            );
+        } else {
+            require(
+                tokenAmount == quantity * blueprints[blueprintID].price,
+                "Purchase amount too low"
+            );
+            //TODO add function to pay fees and artist
+            IERC20(_erc20Token).transferFrom(
+                msg.sender,
+                address(this),
+                tokenAmount
+            );
+        }
+        _mintQuantity(blueprintID, quantity);
+        blueprints[blueprintID].capacity -= quantity;
+    }
+
+    function _mintQuantity(uint256 _blueprintID, uint256 _quantity) private {
+        for (uint256 i = 0; i < _quantity; i++) {
+            uint256 newTokenId = blueprints[_blueprintID].erc721TokenIndex;
+            _mint(msg.sender, newTokenId);
+            blueprints[_blueprintID].erc721TokenIndex += 1;
+        }
     }
 
     function updateBaseTokenUri(

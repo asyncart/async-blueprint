@@ -6,6 +6,8 @@ const oneEth = BigNumber.from("1000000000000000000");
 const zeroAddress = "0x0000000000000000000000000000000000000000";
 const testUri = "https://randomUri/";
 const testHash = "fbejgnvnveorjgnt";
+const tenThousandPieces = 10000;
+const zero = BigNumber.from(0).toString();
 
 describe("Prepare Blueprint Tests", function () {
   let Blueprint;
@@ -24,7 +26,7 @@ describe("Prepare Blueprint Tests", function () {
       .connect(ContractOwner)
       .prepareBlueprint(
         user1.address,
-        1000,
+        tenThousandPieces,
         oneEth,
         zeroAddress,
         testHash,
@@ -36,5 +38,12 @@ describe("Prepare Blueprint Tests", function () {
       BigNumber.from(1).toString()
     );
     expect(result.artist).to.be.equal(user1.address);
+    expect(result.price.toString()).to.be.equal(oneEth.toString());
+    expect(result.capacity.toString()).to.be.equal(
+      BigNumber.from(tenThousandPieces).toString()
+    );
+    expect(result.erc721TokenIndex.toString()).to.be.equal(zero);
+    expect(result.randomSeedSigHash).to.be.equal(testHash);
+    expect(result.baseTokenUri).to.be.equal(testUri);
   });
 });
