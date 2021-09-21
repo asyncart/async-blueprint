@@ -142,8 +142,12 @@ contract Blueprint is
         uint256 tokenAmount
     ) external payable hasSaleStarted(blueprintID) {
         //TODO check if msg.sender is whitelisted
+
+        require(
+            blueprints[blueprintID].capacity >= quantity,
+            "blueprints sold out"
+        );
         address _erc20Token = blueprints[blueprintID].ERC20Token;
-        require(blueprints[blueprintID].capacity >= quantity);
         if (_erc20Token == address(0)) {
             require(tokenAmount == 0, "cannot specify token amount");
             require(
