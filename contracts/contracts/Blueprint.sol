@@ -18,7 +18,7 @@ contract Blueprint is
     uint256 public latestErc721TokenIndex;
 
     address public asyncSaleFeesRecipient;
-    mapping(uint256 => Blueprint) public blueprints;
+    mapping(uint256 => Blueprints) public blueprints;
     mapping(address => uint256) failedTransferCredits;
 
     uint256 public blueprintIndex;
@@ -31,7 +31,7 @@ contract Blueprint is
         started,
         paused
     }
-    struct Blueprint {
+    struct Blueprints {
         SaleState saleState;
         //0 for not started, 1 for started, 2 for paused
         uint256 capacity;
@@ -44,6 +44,14 @@ contract Blueprint is
         address[] feeRecipients;
         uint32[] feeBPS;
     }
+
+    event BlueprintSeed(uint256 blueprintID, string randomSeed);
+
+    event BlueprintPurchased(
+        uint256 blueprintID,
+        uint256 quantity,
+        bytes32 seedPrefix
+    );
 
     modifier isBlueprintPrepared(uint256 _blueprintID) {
         require(
@@ -186,9 +194,19 @@ contract Blueprint is
             );
             _payFeesAndArtist(blueprintID, tokenAmount);
         }
-
-        _mintQuantity(blueprintID, quantity);
         blueprints[blueprintID].capacity -= quantity;
+        _mintQuantity(blueprintID, quantity);
+
+        bytes32 prefixHash = keccak256(
+            abi.encodePacked(
+                block.number,
+                block.timestamp,
+                block.coinbase,
+                blueprints[blueprintID].capacity
+            )
+        );
+
+        emit BlueprintPurchased(blueprintID, quantity, prefixHash);
     }
 
     /*
@@ -200,13 +218,6 @@ contract Blueprint is
             _mint(msg.sender, newTokenId);
             blueprints[_blueprintID].erc721TokenIndex += 1;
         }
-    }
-
-    function updateBaseTokenUri(
-        uint256 blueprintID,
-        string memory newBaseTokenUri
-    ) external onlyRole(DEFAULT_ADMIN_ROLE) isBlueprintPrepared(blueprintID) {
-        blueprints[blueprintID].baseTokenUri = newBaseTokenUri;
     }
 
     ////////////////////////////////////
@@ -223,6 +234,19 @@ contract Blueprint is
     ////////////////////////////
     /// ONLY ADMIN functions ///
     ////////////////////////////
+
+    function updateBaseTokenUri(
+        uint256 blueprintID,
+        string memory newBaseTokenUri
+    ) external onlyRole(DEFAULT_ADMIN_ROLE) isBlueprintPrepared(blueprintID) {
+        blueprints[blueprintID].baseTokenUri = newBaseTokenUri;
+    }
+
+    function revealBlueprintSeed(uint256 blueprintID, string memory randomSeed)
+        external
+    {
+        emit BlueprintSeed(blueprintID, randomSeed);
+    }
 
     function setAsyncFeeRecipient(address _asyncSaleFeesRecipient)
         external
@@ -249,20 +273,23 @@ contract Blueprint is
         defaultPlatformSecondarySalePercentage = _basisPoints;
     }
 
+    function updatePlatformAddress(address platform)
+        external
+        onlyRole(DEFAULT_ADMIN_ROLE)
+    {
+        grantRole(DEFAULT_ADMIN_ROLE, platform);
+        revokeRole(DEFAULT_ADMIN_ROLE, msg.sender);
+    }
+
     ////////////////////////////////////
     /// Secondary Fees implementation //
     ////////////////////////////////////
 
     function _payFeesAndArtist(uint256 _blueprintID, uint256 _amount) internal {
-        uint256 feesPaid;
         address[] memory _feeRecipients = getFeeRecipients(_blueprintID);
         uint32[] memory _feeBPS = getFeeBps(_blueprintID);
         for (uint256 i = 0; i < _feeRecipients.length; i++) {
-            uint256 fee = _getFeePortion(
-                _amount,
-                blueprints[_blueprintID].feeBPS[i]
-            );
-            feesPaid = feesPaid + fee;
+            uint256 fee = _getFeePortion(_amount, _feeBPS[i]);
             _payout(_blueprintID, _feeRecipients[i], fee);
         }
     }
