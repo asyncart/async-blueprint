@@ -96,7 +96,7 @@ contract Blueprint is
         address _erc20Token,
         string memory _randomSeedSigHash,
         string memory _baseTokenUri,
-        address payable[] memory _feeRecipients,
+        address[] memory _feeRecipients,
         uint32[] memory _feeBPS
     ) external onlyRole(DEFAULT_ADMIN_ROLE) {
         uint256 _blueprintID = blueprintIndex;
