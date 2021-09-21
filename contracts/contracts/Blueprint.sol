@@ -63,7 +63,7 @@ contract Blueprint is
         defaultBlueprintSecondarySalePercentage = 1000; // 10%
         defaultPlatformSecondarySalePercentage = 500; //5%
         //TODO Should tokenID start at 0 or 1?
-        latestErc721TokenIndex = 1;
+        // latestErc721TokenIndex = 1;
 
         asyncSaleFeesRecipient = msg.sender;
     }
