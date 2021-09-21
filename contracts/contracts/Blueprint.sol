@@ -170,6 +170,9 @@ contract Blueprint is
         blueprints[blueprintID].capacity -= quantity;
     }
 
+    /*
+     * Iterate and mint each blueprint for user
+     */
     function _mintQuantity(uint256 _blueprintID, uint256 _quantity) private {
         for (uint256 i = 0; i < _quantity; i++) {
             uint256 newTokenId = blueprints[_blueprintID].erc721TokenIndex;
