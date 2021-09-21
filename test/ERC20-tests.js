@@ -2,7 +2,8 @@ const { expect } = require("chai");
 
 const { BigNumber } = require("ethers");
 
-const oneEth = BigNumber.from("1000000000000000000");
+const oneEth = BigNumber.from("10000000000000000000");
+const tenEth = BigNumber.from("100000000000000000000");
 const zeroAddress = "0x0000000000000000000000000000000000000000";
 const testUri = "https://randomUri/";
 const testHash = "fbejgnvnveorjgnt";
@@ -16,9 +17,13 @@ const sale_notStarted = BigNumber.from(1).toString();
 const sale_started = BigNumber.from(2).toString();
 const sale_paused = BigNumber.from(3).toString();
 
-describe("A: Basic Blueprint Sale Tests", function () {
+describe("A: Basic Blueprint Sale ERC20 Tests", function () {
   let Blueprint;
   let blueprint;
+
+  let Erc20;
+  let erc20;
+
   let feeRecipients;
   let feeBps;
 
@@ -31,6 +36,14 @@ describe("A: Basic Blueprint Sale Tests", function () {
 
     Blueprint = await ethers.getContractFactory("Blueprint");
     blueprint = await Blueprint.deploy();
+
+    Erc20 = await ethers.getContractFactory("ERC20MockContract");
+    erc20 = await Erc20.deploy("mock erc20", "mrc");
+
+    await erc20.connect(ContractOwner).mint(user2.address, tenEth);
+
+    await erc20.connect(user2).approve(blueprint.address, tenEth);
+
     blueprint.initialize("Async Blueprint", "ABP");
     await blueprint
       .connect(ContractOwner)
@@ -38,7 +51,7 @@ describe("A: Basic Blueprint Sale Tests", function () {
         user1.address,
         tenThousandPieces,
         oneEth,
-        zeroAddress,
+        erc20.address,
         testHash,
         testUri,
         feeRecipients,
@@ -86,9 +99,7 @@ describe("A: Basic Blueprint Sale Tests", function () {
   });
   it("5: should allow users to purchase blueprints", async function () {
     let blueprintValue = BigNumber.from(tenPieces).mul(oneEth);
-    await blueprint
-      .connect(user2)
-      .purchaseBlueprints(0, tenPieces, 0, { value: blueprintValue });
+    await blueprint.connect(user2).purchaseBlueprints(0, tenPieces, tenEth);
     let result = await blueprint.blueprints(0);
     let expectedCap = tenThousandPieces - tenPieces;
     expect(result.capacity.toString()).to.be.equal(
@@ -102,31 +113,28 @@ describe("A: Basic Blueprint Sale Tests", function () {
   });
   describe("B: Sale + purchase interactions", async function () {
     it("1: should distribute fees", async function () {
-      let ownerBal = await ContractOwner.getBalance();
-      let artistBal = await user1.getBalance();
-      let purchaserBal = await user2.getBalance();
-      let blueprintValue = BigNumber.from(tenPieces).mul(oneEth);
-      await blueprint
-        .connect(user2)
-        .purchaseBlueprints(0, tenPieces, 0, { value: blueprintValue });
+      let ownerBal = await erc20.balanceOf(ContractOwner.address);
+      let artistBal = await erc20.balanceOf(user1.address);
+
+      await blueprint.connect(user2).purchaseBlueprints(0, tenPieces, tenEth);
       let expectedAmount = BigNumber.from(ownerBal);
-      let newOwnerBal = await ContractOwner.getBalance();
+      let newOwnerBal = await erc20.balanceOf(ContractOwner.address);
       expect(newOwnerBal.toString()).to.be.equal(
         expectedAmount.add(oneEth).toString()
       );
       let expectedArtistReturn = oneEth.mul(BigNumber.from(9));
-      let newArtistBal = await user1.getBalance();
+      let newArtistBal = await erc20.balanceOf(user1.address);
       expect(newArtistBal.toString()).to.be.equal(
         BigNumber.from(artistBal).add(expectedArtistReturn).toString()
       );
     });
-    it("2: should not allow user to specify an Erc20 amount", async function () {
+    it("2: should not allow user to specify an Eth amount", async function () {
       let blueprintValue = BigNumber.from(tenPieces).mul(oneEth);
       await expect(
         blueprint
           .connect(user2)
-          .purchaseBlueprints(0, tenPieces, 10, { value: blueprintValue })
-      ).to.be.revertedWith("cannot specify token amount");
+          .purchaseBlueprints(0, tenPieces, 10, { value: 10 })
+      ).to.be.revertedWith("cannot specify eth amount");
     });
   });
 });
