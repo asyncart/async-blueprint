@@ -21,7 +21,7 @@ describe("Admin Blueprint Tests", function () {
     [ContractOwner, user1, user2, user3, testArtist, testPlatform] =
       await ethers.getSigners();
 
-    feeRecipients = [ContractOwner.address, user1.address];
+    feeRecipients = [ContractOwner.address, testArtist.address];
     feeBps = [1000, 9000];
 
     Blueprint = await ethers.getContractFactory("Blueprint");
@@ -33,30 +33,32 @@ describe("Admin Blueprint Tests", function () {
     await blueprint
       .connect(user2)
       .prepareBlueprint(
-        user1.address,
+        testArtist.address,
         tenThousandPieces,
         oneEth,
         zeroAddress,
         testHash,
         testUri,
         feeRecipients,
-        feeBps
+        feeBps,
+        "0x0000000000000000000000000000000000000000000000000000000000000000"
       );
     let result = await blueprint.blueprints(0);
-    expect(result.artist).to.be.equal(user1.address);
+    expect(result.artist).to.be.equal(testArtist.address);
   });
   it("2: should allow for updating baseUri", async function () {
     await blueprint
       .connect(ContractOwner)
       .prepareBlueprint(
-        user1.address,
+        testArtist.address,
         tenThousandPieces,
         oneEth,
         zeroAddress,
         testHash,
         testUri,
         feeRecipients,
-        feeBps
+        feeBps,
+        "0x0000000000000000000000000000000000000000000000000000000000000000"
       );
     let updatedUri = "http://updatedUri/";
     await blueprint.connect(ContractOwner).updateBaseTokenUri(0, updatedUri);

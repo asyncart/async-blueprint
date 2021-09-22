@@ -6,8 +6,6 @@ module.exports = async ({ deployments }) => {
   const accounts = await ethers.getSigners();
   const deployer = accounts[0].address;
   const admin = accounts[1].address;
-
-  console.log("hello");
   await deploy("Blueprint", {
     from: deployer,
     proxy: {

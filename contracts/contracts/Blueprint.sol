@@ -1,10 +1,12 @@
 //SPDX-License-Identifier: Unlicense
 pragma solidity 0.8.4;
 
+import "./abstract/HasSecondarySaleFees.sol";
+
 import "@openzeppelin/contracts-upgradeable/token/ERC721/ERC721Upgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/access/AccessControlEnumerableUpgradeable.sol";
-import "./abstract/HasSecondarySaleFees.sol";
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+import "@openzeppelin/contracts/utils/cryptography/MerkleProof.sol";
 
 import "hardhat/console.sol";
 
@@ -43,12 +45,15 @@ contract Blueprint is
         string baseTokenUri;
         address[] feeRecipients;
         uint32[] feeBPS;
+        bytes32 merkleroot;
     }
 
     event BlueprintSeed(uint256 blueprintID, string randomSeed);
 
     event BlueprintPurchased(
         uint256 blueprintID,
+        address artist,
+        address purchaser,
         uint256 quantity,
         bytes32 seedPrefix
     );
@@ -62,11 +67,29 @@ contract Blueprint is
     }
 
     modifier hasSaleStarted(uint256 _blueprintID) {
+        require(_hasSaleStarted(_blueprintID), "Sale not started");
+        _;
+    }
+
+    modifier BuyerWhitelistedOrSaleStarted(
+        uint256 _blueprintID,
+        uint256 _quantity,
+        bytes32[] calldata proof
+    ) {
         require(
-            blueprints[_blueprintID].saleState == SaleState.started,
-            "Sale not started"
+            _hasSaleStarted(_blueprintID) ||
+                userWhitelisted(_blueprintID, _quantity, proof),
+            "not available to purchase"
         );
         _;
+    }
+
+    function _hasSaleStarted(uint256 _blueprintID)
+        internal
+        view
+        returns (bool)
+    {
+        return blueprints[_blueprintID].saleState == SaleState.started;
     }
 
     function _getFeePortion(uint256 _totalSaleAmount, uint256 _percentage)
@@ -75,6 +98,15 @@ contract Blueprint is
         returns (uint256)
     {
         return (_totalSaleAmount * (_percentage)) / 10000;
+    }
+
+    function userWhitelisted(
+        uint256 _blueprintID,
+        uint256 _quantity,
+        bytes32[] calldata proof
+    ) internal view returns (bool) {
+        bytes32 _merkleroot = blueprints[_blueprintID].merkleroot;
+        return _verify(_leaf(msg.sender, _quantity), _merkleroot, proof);
     }
 
     function initialize(string memory name_, string memory symbol_)
@@ -105,7 +137,8 @@ contract Blueprint is
         string memory _randomSeedSigHash,
         string memory _baseTokenUri,
         address[] memory _feeRecipients,
-        uint32[] memory _feeBps
+        uint32[] memory _feeBps,
+        bytes32 _merkleroot
     ) external onlyRole(DEFAULT_ADMIN_ROLE) {
         uint256 _blueprintID = blueprintIndex;
         blueprints[_blueprintID].artist = _artist;
@@ -129,6 +162,9 @@ contract Blueprint is
             blueprints[_blueprintID].feeRecipients = _feeRecipients;
             blueprints[_blueprintID].feeBPS = _feeBps;
         }
+        if (_merkleroot != 0) {
+            blueprints[_blueprintID].merkleroot = _merkleroot;
+        }
 
         blueprints[_blueprintID].saleState = SaleState.not_started;
         blueprintIndex++;
@@ -138,7 +174,10 @@ contract Blueprint is
         external
         onlyRole(DEFAULT_ADMIN_ROLE)
     {
-        require(blueprints[blueprintID].saleState == SaleState.not_started);
+        require(
+            blueprints[blueprintID].saleState == SaleState.not_started,
+            "sale started or not prepared"
+        );
         blueprints[blueprintID].saleState = SaleState.started;
         //assign the erc721 token index to the blueprint
         blueprints[blueprintID].erc721TokenIndex = latestErc721TokenIndex;
@@ -157,36 +196,42 @@ contract Blueprint is
         external
         onlyRole(DEFAULT_ADMIN_ROLE)
     {
-        require(blueprints[blueprintID].saleState == SaleState.paused);
+        require(
+            blueprints[blueprintID].saleState == SaleState.paused,
+            "Sale not paused"
+        );
         blueprints[blueprintID].saleState = SaleState.started;
     }
 
     function purchaseBlueprints(
         uint256 blueprintID,
         uint256 quantity,
-        uint256 tokenAmount
-    ) external payable hasSaleStarted(blueprintID) {
-        //TODO check if msg.sender is whitelisted
-
+        uint256 tokenAmount,
+        bytes32[] calldata proof
+    )
+        external
+        payable
+        BuyerWhitelistedOrSaleStarted(blueprintID, quantity, proof)
+    {
         require(
             blueprints[blueprintID].capacity >= quantity,
-            "blueprints sold out"
+            "quantity exceeds capacity"
         );
         address _erc20Token = blueprints[blueprintID].ERC20Token;
         if (_erc20Token == address(0)) {
             require(tokenAmount == 0, "cannot specify token amount");
             require(
                 msg.value == quantity * blueprints[blueprintID].price,
-                "Purchase amount too low"
+                "Purchase amount must match price"
             );
             _payFeesAndArtist(blueprintID, msg.value);
         } else {
             require(msg.value == 0, "cannot specify eth amount");
             require(
                 tokenAmount == quantity * blueprints[blueprintID].price,
-                "Purchase amount too low"
+                "Purchase amount must match price"
             );
-            //TODO add function to pay fees and artist
+
             IERC20(_erc20Token).transferFrom(
                 msg.sender,
                 address(this),
@@ -206,7 +251,13 @@ contract Blueprint is
             )
         );
 
-        emit BlueprintPurchased(blueprintID, quantity, prefixHash);
+        emit BlueprintPurchased(
+            blueprintID,
+            blueprints[blueprintID].artist,
+            msg.sender,
+            quantity,
+            prefixHash
+        );
     }
 
     /*
@@ -221,15 +272,24 @@ contract Blueprint is
     }
 
     ////////////////////////////////////
-    /////////// MAIN FUCNTIONS /////////
+    ////// MERKLEROOT FUNCTIONS ////////
     ////////////////////////////////////
 
-    // blueprint 1  for token id 1 - 1000
-    // blueprint 2 (picaso) 1001 1101
-    //
-    // function buyBlueprint(uint256 blueprintID, uint256 amount) external {
-    //     _mint(msg.sender, 1001); // etc
-    // }
+    function _leaf(address account, uint256 quantity)
+        internal
+        pure
+        returns (bytes32)
+    {
+        return keccak256(abi.encodePacked(account, quantity));
+    }
+
+    function _verify(
+        bytes32 leaf,
+        bytes32 merkleroot,
+        bytes32[] memory proof
+    ) internal pure returns (bool) {
+        return MerkleProof.verify(proof, merkleroot, leaf);
+    }
 
     ////////////////////////////
     /// ONLY ADMIN functions ///

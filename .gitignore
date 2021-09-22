@@ -6,3 +6,8 @@ cache
 artifacts
 coverage
 coverage.json
+
+secretsManager.js
+
+scripts
+src
