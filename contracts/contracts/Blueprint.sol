@@ -97,7 +97,7 @@ contract Blueprint is
         string memory _randomSeedSigHash,
         string memory _baseTokenUri,
         address[] memory _feeRecipients,
-        uint32[] memory _feeBPS
+        uint32[] memory _feeBps
     ) external onlyRole(DEFAULT_ADMIN_ROLE) {
         uint256 _blueprintID = blueprintIndex;
         blueprints[_blueprintID].artist = _artist;
@@ -108,8 +108,20 @@ contract Blueprint is
         }
         blueprints[_blueprintID].randomSeedSigHash = _randomSeedSigHash;
         blueprints[_blueprintID].baseTokenUri = _baseTokenUri;
-        blueprints[_blueprintID].feeRecipients = _feeRecipients;
-        blueprints[_blueprintID].feeBPS = _feeBPS;
+        if (_feeRecipients.length != 0 || _feeBps.length != 0) {
+            require(
+                _feeRecipients.length == _feeBps.length,
+                "mismatched recipients & Bps"
+            );
+            uint32 totalPercent;
+            for (uint256 i = 0; i < _feeBps.length; i++) {
+                totalPercent = totalPercent + _feeBps[i];
+            }
+            require(totalPercent <= 10000, "Fee Bps exceed maximum");
+            blueprints[_blueprintID].feeRecipients = _feeRecipients;
+            blueprints[_blueprintID].feeBPS = _feeBps;
+        }
+
         blueprints[_blueprintID].saleState = SaleState.not_started;
         blueprintIndex++;
     }
@@ -161,6 +173,7 @@ contract Blueprint is
             );
             _payFeesAndArtist(blueprintID, msg.value);
         } else {
+            require(msg.value == 0, "cannot specify eth amount");
             require(
                 tokenAmount == quantity * blueprints[blueprintID].price,
                 "Purchase amount too low"

@@ -9,6 +9,9 @@ const testHash = "fbejgnvnveorjgnt";
 const tenThousandPieces = 10000;
 const zero = BigNumber.from(0).toString();
 
+const emptyFeeRecipients = [];
+const emptyFeePercentages = [];
+
 describe("Prepare Blueprint Tests", function () {
   let Blueprint;
   let blueprint;
@@ -52,5 +55,41 @@ describe("Prepare Blueprint Tests", function () {
     expect(result.erc721TokenIndex.toString()).to.be.equal(zero);
     expect(result.randomSeedSigHash).to.be.equal(testHash);
     expect(result.baseTokenUri).to.be.equal(testUri);
+  });
+  it("2: should allow user to not specify fees", async function () {
+    let emptyFeeRecipients = [];
+    let emptyFeePercentages = [];
+
+    await blueprint
+      .connect(ContractOwner)
+      .prepareBlueprint(
+        user1.address,
+        tenThousandPieces,
+        oneEth,
+        zeroAddress,
+        testHash,
+        testUri,
+        emptyFeeRecipients,
+        emptyFeePercentages
+      );
+    let result = await blueprint.blueprints(0);
+    await expect(result.artist).to.be.equal(user1.address);
+  });
+  it("3: should not allow mismatched fee recipients", async function () {
+    let misFeeRecips = [user1.address];
+    await expect(
+      blueprint
+        .connect(ContractOwner)
+        .prepareBlueprint(
+          user1.address,
+          tenThousandPieces,
+          oneEth,
+          zeroAddress,
+          testHash,
+          testUri,
+          misFeeRecips,
+          feeBps
+        )
+    ).to.be.revertedWith("mismatched recipients & Bps");
   });
 });
