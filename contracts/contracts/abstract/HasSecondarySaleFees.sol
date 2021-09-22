@@ -26,11 +26,11 @@ abstract contract HasSecondarySaleFees is ERC165StorageUpgradeable {
         public
         view
         virtual
-        returns (address payable[] memory);
+        returns (address[] memory);
 
     function getFeeBps(uint256 id)
         public
         view
         virtual
-        returns (uint256[] memory);
+        returns (uint32[] memory);
 }

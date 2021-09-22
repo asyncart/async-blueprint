@@ -12,10 +12,15 @@ const zero = BigNumber.from(0).toString();
 describe("Prepare Blueprint Tests", function () {
   let Blueprint;
   let blueprint;
+  let feeRecipients;
+  let feeBps;
 
   beforeEach(async function () {
     [ContractOwner, user1, user2, user3, testArtist, testPlatform] =
       await ethers.getSigners();
+
+    feeRecipients = [ContractOwner.address, user1.address];
+    feeBps = [1000, 9000];
 
     Blueprint = await ethers.getContractFactory("Blueprint");
     blueprint = await Blueprint.deploy();
@@ -30,7 +35,9 @@ describe("Prepare Blueprint Tests", function () {
         oneEth,
         zeroAddress,
         testHash,
-        testUri
+        testUri,
+        feeRecipients,
+        feeBps
       );
 
     let result = await blueprint.blueprints(0);

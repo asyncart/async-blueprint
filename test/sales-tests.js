@@ -19,10 +19,15 @@ const sale_paused = BigNumber.from(3).toString();
 describe("Basic Blueprint Sale Tests", function () {
   let Blueprint;
   let blueprint;
+  let feeRecipients;
+  let feeBps;
 
   beforeEach(async function () {
     [ContractOwner, user1, user2, user3, testArtist, testPlatform] =
       await ethers.getSigners();
+
+    feeRecipients = [ContractOwner.address, user1.address];
+    feeBps = [1000, 9000];
 
     Blueprint = await ethers.getContractFactory("Blueprint");
     blueprint = await Blueprint.deploy();
@@ -35,7 +40,9 @@ describe("Basic Blueprint Sale Tests", function () {
         oneEth,
         zeroAddress,
         testHash,
-        testUri
+        testUri,
+        feeRecipients,
+        feeBps
       );
     await blueprint.connect(ContractOwner).beginSale(0);
   });
@@ -69,7 +76,9 @@ describe("Basic Blueprint Sale Tests", function () {
         oneEth,
         zeroAddress,
         testHash + "dsfdk",
-        testUri + "unpause_test"
+        testUri + "unpause_test",
+        feeRecipients,
+        feeBps
       );
     await expect(
       blueprint.connect(ContractOwner).pauseSale(1)
@@ -87,6 +96,8 @@ describe("Basic Blueprint Sale Tests", function () {
     );
     //should end on the next index
     //this user owns 0 - 9, next user will own 10 - x
-    expect(result.erc721TokenIndex.toString()).to.be.equal(tenPieces);
+    expect(result.erc721TokenIndex.toString()).to.be.equal(
+      BigNumber.from(tenPieces).toString()
+    );
   });
 });

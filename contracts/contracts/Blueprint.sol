@@ -13,13 +13,17 @@ contract Blueprint is
     HasSecondarySaleFees,
     AccessControlEnumerableUpgradeable
 {
-    uint256 public defaultBlueprintSecondarySalePercentage;
-    uint256 public defaultPlatformSecondarySalePercentage;
+    uint32 public defaultBlueprintSecondarySalePercentage;
+    uint32 public defaultPlatformSecondarySalePercentage;
     uint256 public latestErc721TokenIndex;
 
     address public asyncSaleFeesRecipient;
     mapping(uint256 => Blueprint) public blueprints;
+    mapping(address => uint256) failedTransferCredits;
+
     uint256 public blueprintIndex;
+
+    bytes32 public constant OPERATOR_ROLE = keccak256("OPERATOR_ROLE");
 
     enum SaleState {
         not_prepared,
@@ -28,15 +32,17 @@ contract Blueprint is
         paused
     }
     struct Blueprint {
-        address artist;
+        SaleState saleState;
+        //0 for not started, 1 for started, 2 for paused
         uint256 capacity;
         uint256 price;
         uint256 erc721TokenIndex;
         address ERC20Token;
+        address artist;
         string randomSeedSigHash;
         string baseTokenUri;
-        SaleState saleState;
-        //0 for not started, 1 for started, 2 for paused
+        address[] feeRecipients;
+        uint32[] feeBPS;
     }
 
     modifier isBlueprintPrepared(uint256 _blueprintID) {
@@ -55,7 +61,13 @@ contract Blueprint is
         _;
     }
 
-    bytes32 public constant OPERATOR_ROLE = keccak256("OPERATOR_ROLE");
+    function _getFeePortion(uint256 _totalSaleAmount, uint256 _percentage)
+        internal
+        pure
+        returns (uint256)
+    {
+        return (_totalSaleAmount * (_percentage)) / 10000;
+    }
 
     function initialize(string memory name_, string memory symbol_)
         public
@@ -83,7 +95,9 @@ contract Blueprint is
         uint256 _price,
         address _erc20Token,
         string memory _randomSeedSigHash,
-        string memory _baseTokenUri
+        string memory _baseTokenUri,
+        address[] memory _feeRecipients,
+        uint32[] memory _feeBPS
     ) external onlyRole(DEFAULT_ADMIN_ROLE) {
         uint256 _blueprintID = blueprintIndex;
         blueprints[_blueprintID].artist = _artist;
@@ -94,19 +108,10 @@ contract Blueprint is
         }
         blueprints[_blueprintID].randomSeedSigHash = _randomSeedSigHash;
         blueprints[_blueprintID].baseTokenUri = _baseTokenUri;
+        blueprints[_blueprintID].feeRecipients = _feeRecipients;
+        blueprints[_blueprintID].feeBPS = _feeBPS;
         blueprints[_blueprintID].saleState = SaleState.not_started;
         blueprintIndex++;
-
-        //        - platformOnly
-        // -feeRecipients
-        // -feeBPS
-        // -capacity
-        // -priceAmount
-        // -priceCurrency (ETH or ERC20)
-        // -randomSeedSignatureHash
-        // -baseTokenURI
-        // -whitelistedPresalesMerkleroot
-        // @Return blueprintID
     }
 
     function beginSale(uint256 blueprintID)
@@ -154,6 +159,7 @@ contract Blueprint is
                 msg.value == quantity * blueprints[blueprintID].price,
                 "Purchase amount too low"
             );
+            _payFeesAndArtist(blueprintID, msg.value);
         } else {
             require(
                 tokenAmount == quantity * blueprints[blueprintID].price,
@@ -165,7 +171,9 @@ contract Blueprint is
                 address(this),
                 tokenAmount
             );
+            _payFeesAndArtist(blueprintID, tokenAmount);
         }
+
         _mintQuantity(blueprintID, quantity);
         blueprints[blueprintID].capacity -= quantity;
     }
@@ -210,7 +218,7 @@ contract Blueprint is
         asyncSaleFeesRecipient = _asyncSaleFeesRecipient;
     }
 
-    function changedefaultBlueprintSecondarySalePercentage(uint256 _basisPoints)
+    function changedefaultBlueprintSecondarySalePercentage(uint32 _basisPoints)
         external
         onlyRole(DEFAULT_ADMIN_ROLE)
     {
@@ -218,7 +226,7 @@ contract Blueprint is
         defaultBlueprintSecondarySalePercentage = _basisPoints;
     }
 
-    function changeDefaultPlatformSecondarySalePercentage(uint256 _basisPoints)
+    function changeDefaultPlatformSecondarySalePercentage(uint32 _basisPoints)
         external
         onlyRole(DEFAULT_ADMIN_ROLE)
     {
@@ -232,30 +240,89 @@ contract Blueprint is
     /// Secondary Fees implementation //
     ////////////////////////////////////
 
+    function _payFeesAndArtist(uint256 _blueprintID, uint256 _amount) internal {
+        uint256 feesPaid;
+        address[] memory _feeRecipients = getFeeRecipients(_blueprintID);
+        uint32[] memory _feeBPS = getFeeBps(_blueprintID);
+        for (uint256 i = 0; i < _feeRecipients.length; i++) {
+            uint256 fee = _getFeePortion(
+                _amount,
+                blueprints[_blueprintID].feeBPS[i]
+            );
+            feesPaid = feesPaid + fee;
+            _payout(_blueprintID, _feeRecipients[i], fee);
+        }
+    }
+
+    function _payout(
+        uint256 _blueprintID,
+        address _recipient,
+        uint256 _amount
+    ) internal {
+        address ERC20Token = blueprints[_blueprintID].ERC20Token;
+        if (ERC20Token != address(0)) {
+            IERC20(ERC20Token).transfer(_recipient, _amount);
+        } else {
+            // attempt to send the funds to the recipient
+            (bool success, ) = payable(_recipient).call{
+                value: _amount,
+                gas: 20000
+            }("");
+            // if it failed, update their credit balance so they can pull it later
+            if (!success) {
+                failedTransferCredits[_recipient] =
+                    failedTransferCredits[_recipient] +
+                    _amount;
+            }
+        }
+    }
+
+    function withdrawAllFailedCredits() external {
+        uint256 amount = failedTransferCredits[msg.sender];
+
+        require(amount != 0, "no credits to withdraw");
+
+        failedTransferCredits[msg.sender] = 0;
+
+        (bool successfulWithdraw, ) = msg.sender.call{
+            value: amount,
+            gas: 20000
+        }("");
+        require(successfulWithdraw, "withdraw failed");
+    }
+
     function getFeeRecipients(uint256 id)
         public
         view
         override
-        returns (address payable[] memory)
+        returns (address[] memory)
     {
-        address payable[] memory feeRecipients = new address payable[](2);
-        feeRecipients[0] = payable(asyncSaleFeesRecipient);
-        feeRecipients[1] = payable(blueprints[id].artist);
+        if (blueprints[id].feeRecipients.length == 0) {
+            address[] memory feeRecipients = new address[](2);
+            feeRecipients[0] = (asyncSaleFeesRecipient);
+            feeRecipients[1] = (blueprints[id].artist);
 
-        return feeRecipients;
+            return feeRecipients;
+        } else {
+            return blueprints[id].feeRecipients;
+        }
     }
 
     function getFeeBps(uint256 id)
         public
         view
         override
-        returns (uint256[] memory)
+        returns (uint32[] memory)
     {
-        uint256[] memory fees = new uint256[](2);
-        fees[0] = defaultPlatformSecondarySalePercentage;
-        fees[1] = defaultBlueprintSecondarySalePercentage;
+        if (blueprints[id].feeBPS.length == 0) {
+            uint32[] memory feeBPS = new uint32[](2);
+            feeBPS[0] = defaultPlatformSecondarySalePercentage;
+            feeBPS[1] = defaultBlueprintSecondarySalePercentage;
 
-        return fees;
+            return feeBPS;
+        } else {
+            return blueprints[id].feeBPS;
+        }
     }
 
     ////////////////////////////////////
