@@ -143,7 +143,7 @@ describe("Blueprint Sales", function () {
         expect(newOwnerBal.toString()).to.be.equal(
           expectedAmount.add(oneEth).toString()
         );
-        let expectedArtistReturn = oneEth.mul(BigNumber.from(9));
+        let expectedArtistReturn = oneEth.mul(9);
         let newArtistBal = await testArtist.getBalance();
         expect(newArtistBal.toString()).to.be.equal(
           BigNumber.from(artistBal).add(expectedArtistReturn).toString()
@@ -178,12 +178,38 @@ describe("Blueprint Sales", function () {
             )
         ).to.be.revertedWith("quantity exceeds capacity");
       });
-      it("4: should not allow sale for less than price", async function () {
-        await expect(
-          blueprint
-            .connect(user2)
-            .purchaseBlueprints(0, tenPieces, 0, [], { value: oneEth })
-        ).to.be.revertedWith("Purchase amount must match price");
+      it("5: should default fees if none provided", async function () {
+        await blueprint
+          .connect(ContractOwner)
+          .prepareBlueprint(
+            testArtist.address,
+            oneThousandPieces,
+            oneEth,
+            zeroAddress,
+            testHash + "dsfdk",
+            testUri + "_test",
+            [],
+            [],
+            this.merkleTree.getHexRoot()
+          );
+        await blueprint.connect(ContractOwner).beginSale(1);
+        await blueprint.setAsyncFeeRecipient(testPlatform.address);
+        let testPlatformBal = await testPlatform.getBalance();
+        let artistBal = await testArtist.getBalance();
+        let blueprintValue = BigNumber.from(tenPieces).mul(oneEth);
+        await blueprint
+          .connect(user2)
+          .purchaseBlueprints(1, tenPieces, 0, [], { value: blueprintValue });
+        let expectedAmount = BigNumber.from(testPlatformBal);
+        let newPlatformBal = await testPlatform.getBalance();
+        expect(newPlatformBal.toString()).to.be.equal(
+          expectedAmount.add(oneEth.div(2)).toString()
+        );
+        let expectedArtistReturn = oneEth.mul(19).div(2);
+        let newArtistBal = await testArtist.getBalance();
+        expect(newArtistBal.toString()).to.be.equal(
+          BigNumber.from(artistBal).add(expectedArtistReturn).toString()
+        );
       });
     });
   });

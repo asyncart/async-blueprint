@@ -7,11 +7,14 @@ const { BigNumber } = require("ethers");
 
 const oneEth = BigNumber.from("10000000000000000000");
 const tenEth = BigNumber.from("100000000000000000000");
+const oneThousandTokens = BigNumber.from("10000000000000000000000");
 const zeroAddress = "0x0000000000000000000000000000000000000000";
 const testUri = "https://randomUri/";
 const testHash = "fbejgnvnveorjgnt";
 const tenThousandPieces = 10000;
+const oneThousandPieces = 1000;
 const zero = BigNumber.from(0).toString();
+const fiveHundredPieces = BigNumber.from(oneThousandPieces).div(2);
 
 const tenPieces = 10;
 
@@ -62,16 +65,20 @@ describe("ERC20 interactions", function () {
       Erc20 = await ethers.getContractFactory("ERC20MockContract");
       erc20 = await Erc20.deploy("mock erc20", "mrc");
 
-      await erc20.connect(ContractOwner).mint(user2.address, tenEth);
+      await erc20.connect(ContractOwner).mint(user2.address, oneThousandTokens);
 
-      await erc20.connect(user2).approve(blueprint.address, tenEth);
+      await erc20.connect(user2).approve(blueprint.address, oneThousandTokens);
+
+      await erc20.connect(ContractOwner).mint(user1.address, oneThousandTokens);
+
+      await erc20.connect(user1).approve(blueprint.address, oneThousandTokens);
 
       blueprint.initialize("Async Blueprint", "ABP");
       await blueprint
         .connect(ContractOwner)
         .prepareBlueprint(
           testArtist.address,
-          tenThousandPieces,
+          fiveHundredPieces,
           oneEth,
           erc20.address,
           testHash,
@@ -89,7 +96,7 @@ describe("ERC20 interactions", function () {
       );
       let erc721Index = await blueprint.latestErc721TokenIndex();
       expect(erc721Index.toString()).to.be.equal(
-        BigNumber.from(tenThousandPieces).toString()
+        BigNumber.from(fiveHundredPieces).toString()
       );
     });
     it("2: should allow for pausing of sale", async function () {
@@ -108,7 +115,7 @@ describe("ERC20 interactions", function () {
         .connect(ContractOwner)
         .prepareBlueprint(
           user2.address,
-          tenThousandPieces,
+          fiveHundredPieces,
           oneEth,
           zeroAddress,
           testHash + "dsfdk",
@@ -127,7 +134,7 @@ describe("ERC20 interactions", function () {
         .connect(user2)
         .purchaseBlueprints(0, tenPieces, tenEth, []);
       let result = await blueprint.blueprints(0);
-      let expectedCap = tenThousandPieces - tenPieces;
+      let expectedCap = fiveHundredPieces - tenPieces;
       expect(result.capacity.toString()).to.be.equal(
         BigNumber.from(expectedCap).toString()
       );
@@ -164,6 +171,28 @@ describe("ERC20 interactions", function () {
             .connect(user2)
             .purchaseBlueprints(0, tenPieces, 10, [], { value: 10 })
         ).to.be.revertedWith("cannot specify eth amount");
+      });
+      it("3: should not allow purchase of more than capacity", async function () {
+        let fiveHundredEth = fiveHundredPieces.mul(oneEth);
+        await blueprint
+          .connect(user1)
+          .purchaseBlueprints(0, fiveHundredPieces, fiveHundredEth, []);
+
+        await expect(
+          blueprint
+            .connect(user2)
+            .purchaseBlueprints(
+              0,
+              fiveHundredPieces.add(BigNumber.from(1)),
+              fiveHundredEth.add(oneEth),
+              []
+            )
+        ).to.be.revertedWith("quantity exceeds capacity");
+      });
+      it("4: should not allow sale for less than price", async function () {
+        await expect(
+          blueprint.connect(user2).purchaseBlueprints(0, tenPieces, oneEth, [])
+        ).to.be.revertedWith("Purchase amount must match price");
       });
     });
   });

@@ -39,7 +39,7 @@ describe("Merkleroot Tests", function () {
     );
   });
 
-  describe("Mint all elements", function () {
+  describe("A: Mint all whitelisted", function () {
     let Blueprint;
     let blueprint;
     let feeRecipients;
@@ -93,22 +93,58 @@ describe("Merkleroot Tests", function () {
         expect(result.erc721TokenIndex.toString()).to.be.equal(
           BigNumber.from(index).toString()
         );
-        /**
-         * Create merkle proof (anyone with knowledge of the merkle tree)
-         */
-
-        /**
-         * Redeems token using merkle proof (anyone with the proof)
-         */
       });
     }
-    it("should not allow non whitelisted user", async function () {
-      const proof = this.merkleTree.getHexProof(hashToken(user3.address, 1));
+    it("2: should not allow non whitelisted user", async function () {
+      const proof = this.merkleTree.getHexProof(hashToken(user2.address, 1));
       await expect(
         blueprint
           .connect(user3)
           .purchaseBlueprints(0, 1, 0, proof, { value: oneEth })
       ).to.be.revertedWith("not available to purchase");
+    });
+    it("3: should not allow buyer when no merkle provided", async function () {
+      await blueprint
+        .connect(ContractOwner)
+        .prepareBlueprint(
+          user3.address,
+          tenThousandPieces,
+          oneEth.div(2),
+          zeroAddress,
+          testHash,
+          testUri,
+          feeRecipients,
+          feeBps,
+          "0x0000000000000000000000000000000000000000000000000000000000000000"
+        );
+      let result = await blueprint.blueprints(1);
+      expect(result.saleState.toString()).to.be.equal(
+        BigNumber.from(1).toString()
+      );
+      expect(result.artist).to.be.equal(user3.address);
+      expect(result.price.toString()).to.be.equal(oneEth.div(2).toString());
+      expect(result.capacity.toString()).to.be.equal(
+        BigNumber.from(tenThousandPieces).toString()
+      );
+      expect(result.erc721TokenIndex.toString()).to.be.equal(zero);
+      expect(result.randomSeedSigHash).to.be.equal(testHash);
+      expect(result.baseTokenUri).to.be.equal(testUri);
+
+      const proof = this.merkleTree.getHexProof(hashToken(user1.address, 10));
+      const blueprintValue = BigNumber.from(1).mul(oneEth).div(2);
+      await expect(
+        blueprint
+          .connect(user1)
+          .purchaseBlueprints(1, 1, 0, proof, { value: blueprintValue })
+      ).to.be.revertedWith("not available to purchase");
+    });
+    it("4: should revert when no proof provided", async function () {
+      const proof = this.merkleTree.getHexProof(hashToken(user1.address, 1));
+      await expect(
+        blueprint
+          .connect(user3)
+          .purchaseBlueprints(0, 1, 0, proof, { value: oneEth })
+      ).to.be.revertedWith("no proof provided");
     });
   });
 });

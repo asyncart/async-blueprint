@@ -117,7 +117,25 @@ describe("Prepare Blueprint", function () {
           )
       ).to.be.revertedWith("mismatched recipients & Bps");
     });
-    it("4: should not allow sale for unprepared blueprint", async function () {
+    it("4: should not allow fee bps to exceed 10000", async function () {
+      let mismatchBps = [5000, 6000];
+      await expect(
+        blueprint
+          .connect(ContractOwner)
+          .prepareBlueprint(
+            testArtist.address,
+            tenThousandPieces,
+            oneEth,
+            zeroAddress,
+            testHash,
+            testUri,
+            feeRecipients,
+            mismatchBps,
+            this.merkleTree.getHexRoot()
+          )
+      ).to.be.revertedWith("Fee Bps exceed maximum");
+    });
+    it("5: should not allow sale for unprepared blueprint", async function () {
       await expect(
         blueprint.connect(ContractOwner).beginSale(0)
       ).to.be.revertedWith("sale started or not prepared");
