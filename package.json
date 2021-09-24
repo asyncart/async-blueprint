@@ -4,7 +4,9 @@
     "compile": "hardhat compile",
     "test": "hardhat test",
     "coverage": "hardhat coverage",
-    "deploy": "hardhat deploy"
+    "deploy": "hardhat deploy",
+    "deploy-rinkeby": "hardhat deploy --network rinkeby",
+    "verify": "npx hardhat verify --network rinkeby"
   },
   "dependencies": {
     "@nomiclabs/hardhat-ethers": "^2.0.2",
@@ -17,6 +19,8 @@
     "ethers": "^5.4.7",
     "hardhat": "^2.4.1",
     "hardhat-gas-reporter": "^1.0.4",
+    "keccak256": "^1.0.3",
+    "merkletreejs": "^0.2.24",
     "solidity-coverage": "^0.7.16"
   },
   "devDependencies": {
