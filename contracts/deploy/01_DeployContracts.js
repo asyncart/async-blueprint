@@ -3,7 +3,6 @@ const { network } = require("hardhat");
 module.exports = async ({ deployments }) => {
   const { deploy } = deployments;
   // const { deployer, admin } = await getNamedAccounts();
-  //npx hardhat --network rinkeby etherscan-verify --api-key I7IZVKXC34C5IBGNAQMN871EG3EKQGPAAC --force-license --license UNLICENSED
   const accounts = await ethers.getSigners();
   const deployer = accounts[0].address;
   await deploy("Blueprint", {
