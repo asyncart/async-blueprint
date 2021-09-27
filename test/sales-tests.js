@@ -65,7 +65,9 @@ describe("Blueprint Sales", function () {
           testUri,
           feeRecipients,
           feeBps,
-          this.merkleTree.getHexRoot()
+          this.merkleTree.getHexRoot(),
+          0,
+          0
         );
       await blueprint.connect(ContractOwner).beginSale(0);
     });
@@ -108,7 +110,9 @@ describe("Blueprint Sales", function () {
           testUri + "unpause_test",
           feeRecipients,
           feeBps,
-          this.merkleTree.getHexRoot()
+          this.merkleTree.getHexRoot(),
+          0,
+          0
         );
       await expect(
         blueprint.connect(ContractOwner).pauseSale(1)
@@ -129,6 +133,15 @@ describe("Blueprint Sales", function () {
       expect(result.erc721TokenIndex.toString()).to.be.equal(
         BigNumber.from(tenPieces).toString()
       );
+    });
+    it("6: should not allow users to purchase blueprints if sale paused", async function () {
+      await blueprint.connect(ContractOwner).pauseSale(0);
+      let blueprintValue = BigNumber.from(tenPieces).mul(oneEth);
+      await expect(
+        blueprint
+          .connect(user2)
+          .purchaseBlueprints(0, tenPieces, 0, [], { value: blueprintValue })
+      ).to.be.revertedWith("not available to purchase");
     });
     describe("B: Sale + purchase interactions", async function () {
       it("1: should distribute fees", async function () {
@@ -190,7 +203,9 @@ describe("Blueprint Sales", function () {
             testUri + "_test",
             [],
             [],
-            this.merkleTree.getHexRoot()
+            this.merkleTree.getHexRoot(),
+            0,
+            0
           );
         await blueprint.connect(ContractOwner).beginSale(1);
         await blueprint.setAsyncFeeRecipient(testPlatform.address);

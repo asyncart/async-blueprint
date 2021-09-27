@@ -85,7 +85,9 @@ describe("ERC20 interactions", function () {
           testUri,
           feeRecipients,
           feeBps,
-          this.merkleTree.getHexRoot()
+          this.merkleTree.getHexRoot(),
+          0,
+          0
         );
       await blueprint.connect(ContractOwner).beginSale(0);
     });
@@ -122,7 +124,9 @@ describe("ERC20 interactions", function () {
           testUri + "unpause_test",
           feeRecipients,
           feeBps,
-          this.merkleTree.getHexRoot()
+          this.merkleTree.getHexRoot(),
+          0,
+          0
         );
       await expect(
         blueprint.connect(ContractOwner).pauseSale(1)
