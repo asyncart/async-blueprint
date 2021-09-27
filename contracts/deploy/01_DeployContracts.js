@@ -9,6 +9,7 @@ module.exports = async ({ deployments }) => {
     from: deployer,
     proxy: {
       execute: {
+        proxyContract: "UUPSProxy",
         methodName: "initialize",
         args: ["Async Blueprint", "ABP"],
       },

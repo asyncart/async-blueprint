@@ -8,8 +8,6 @@ import "@openzeppelin/contracts-upgradeable/access/AccessControlEnumerableUpgrad
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "@openzeppelin/contracts/utils/cryptography/MerkleProof.sol";
 
-import "hardhat/console.sol";
-
 contract Blueprint is
     ERC721Upgradeable,
     HasSecondarySaleFees,
@@ -23,6 +21,8 @@ contract Blueprint is
     mapping(address => uint256) failedTransferCredits;
 
     uint256 public blueprintIndex;
+
+    address platform;
 
     bytes32 public constant OPERATOR_ROLE = keccak256("OPERATOR_ROLE");
 
@@ -38,6 +38,8 @@ contract Blueprint is
         uint256 capacity;
         uint256 price;
         uint256 erc721TokenIndex;
+        uint256 mintAmountArtist;
+        uint256 mintAmountPlatform;
         address ERC20Token;
         address artist;
         string randomSeedSigHash;
@@ -50,7 +52,7 @@ contract Blueprint is
 
     event BlueprintSeed(uint256 blueprintID, string randomSeed);
 
-    event BlueprintPurchased(
+    event BlueprintsMinted(
         uint256 blueprintID,
         address artist,
         address purchaser,
@@ -147,6 +149,8 @@ contract Blueprint is
         _setupRole(DEFAULT_ADMIN_ROLE, msg.sender);
         _setupRole(OPERATOR_ROLE, msg.sender);
 
+        platform = msg.sender;
+
         defaultPlatformFeePercentage = 500; //5%
         //TODO Should tokenID start at 0 or 1?
         // latestErc721TokenIndex = 1;
@@ -163,7 +167,9 @@ contract Blueprint is
         string memory _baseTokenUri,
         address[] memory _feeRecipients,
         uint32[] memory _feeBps,
-        bytes32 _merkleroot
+        bytes32 _merkleroot,
+        uint256 _mintAmountArtist,
+        uint256 _mintAmountPlatform
     ) external onlyRole(DEFAULT_ADMIN_ROLE) {
         uint256 _blueprintID = blueprintIndex;
         blueprints[_blueprintID].artist = _artist;
@@ -190,6 +196,9 @@ contract Blueprint is
         if (_merkleroot != 0) {
             blueprints[_blueprintID].merkleroot = _merkleroot;
         }
+
+        blueprints[_blueprintID].mintAmountArtist = _mintAmountArtist;
+        blueprints[_blueprintID].mintAmountPlatform = _mintAmountPlatform;
 
         blueprints[_blueprintID].saleState = SaleState.not_started;
         blueprintIndex++;
@@ -249,9 +258,36 @@ contract Blueprint is
 
         _mintQuantity(blueprintID, quantity);
 
-        if (blueprints[blueprintID].saleState == SaleState.not_prepared) {
+        if (blueprints[blueprintID].saleState == SaleState.not_started) {
             blueprints[blueprintID].claimedWhitelistedPieces[msg.sender] = true;
         }
+    }
+
+    function preSaleMint(uint256 blueprintID, uint256 quantity) external {
+        require(
+            _isBlueprintPreparedAndNotStarted(blueprintID),
+            "Must be prepared and not started"
+        );
+        require(
+            platform == msg.sender ||
+                blueprints[blueprintID].artist == msg.sender,
+            "user cannot mint presale"
+        );
+
+        if (platform == msg.sender) {
+            require(
+                quantity <= blueprints[blueprintID].mintAmountPlatform,
+                "cannot mint quantity"
+            );
+            blueprints[blueprintID].mintAmountPlatform -= quantity;
+        } else if (blueprints[blueprintID].artist == msg.sender) {
+            require(
+                quantity <= blueprints[blueprintID].mintAmountArtist,
+                "cannot mint quantity"
+            );
+            blueprints[blueprintID].mintAmountArtist -= quantity;
+        }
+        _mintQuantity(blueprintID, quantity);
     }
 
     /*
@@ -275,7 +311,7 @@ contract Blueprint is
             )
         );
 
-        emit BlueprintPurchased(
+        emit BlueprintsMinted(
             _blueprintID,
             blueprints[_blueprintID].artist,
             msg.sender,
@@ -368,12 +404,14 @@ contract Blueprint is
         defaultPlatformFeePercentage = _basisPoints;
     }
 
-    function updatePlatformAddress(address platform)
+    function updatePlatformAddress(address _platform)
         external
         onlyRole(DEFAULT_ADMIN_ROLE)
     {
-        grantRole(DEFAULT_ADMIN_ROLE, platform);
+        grantRole(DEFAULT_ADMIN_ROLE, _platform);
+
         revokeRole(DEFAULT_ADMIN_ROLE, msg.sender);
+        platform = _platform;
     }
 
     ////////////////////////////////////

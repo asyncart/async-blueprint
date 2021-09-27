@@ -41,7 +41,9 @@ describe("Admin Blueprint Tests", function () {
         testUri,
         feeRecipients,
         feeBps,
-        "0x0000000000000000000000000000000000000000000000000000000000000000"
+        "0x0000000000000000000000000000000000000000000000000000000000000000",
+        0,
+        0
       );
     let result = await blueprint.blueprints(0);
     expect(result.artist).to.be.equal(testArtist.address);
@@ -58,7 +60,9 @@ describe("Admin Blueprint Tests", function () {
         testUri,
         feeRecipients,
         feeBps,
-        "0x0000000000000000000000000000000000000000000000000000000000000000"
+        "0x0000000000000000000000000000000000000000000000000000000000000000",
+        0,
+        0
       );
     let updatedUri = "http://updatedUri/";
     await blueprint.connect(ContractOwner).updateBaseTokenUri(0, updatedUri);
@@ -83,7 +87,9 @@ describe("Admin Blueprint Tests", function () {
         testUri,
         feeRecipients,
         feeBps,
-        "0x0000000000000000000000000000000000000000000000000000000000000000"
+        "0x0000000000000000000000000000000000000000000000000000000000000000",
+        0,
+        0
       );
     let randomSeed = "randomSeedHash";
     await expect(blueprint.revealBlueprintSeed(0, randomSeed))
