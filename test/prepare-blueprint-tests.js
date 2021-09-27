@@ -63,7 +63,9 @@ describe("Prepare Blueprint", function () {
           testUri,
           feeRecipients,
           feeBps,
-          this.merkleTree.getHexRoot()
+          this.merkleTree.getHexRoot(),
+          0,
+          0
         );
 
       let result = await blueprint.blueprints(0);
@@ -94,7 +96,9 @@ describe("Prepare Blueprint", function () {
           testUri,
           emptyFeeRecipients,
           emptyFeePercentages,
-          this.merkleTree.getHexRoot()
+          this.merkleTree.getHexRoot(),
+          0,
+          0
         );
       let result = await blueprint.blueprints(0);
       await expect(result.artist).to.be.equal(testArtist.address);
@@ -113,7 +117,9 @@ describe("Prepare Blueprint", function () {
             testUri,
             misFeeRecips,
             feeBps,
-            this.merkleTree.getHexRoot()
+            this.merkleTree.getHexRoot(),
+            0,
+            0
           )
       ).to.be.revertedWith("mismatched recipients & Bps");
     });
@@ -131,7 +137,9 @@ describe("Prepare Blueprint", function () {
             testUri,
             feeRecipients,
             mismatchBps,
-            this.merkleTree.getHexRoot()
+            this.merkleTree.getHexRoot(),
+            0,
+            0
           )
       ).to.be.revertedWith("Fee Bps exceed maximum");
     });

@@ -64,7 +64,9 @@ describe("Merkleroot Tests", function () {
           testUri,
           feeRecipients,
           feeBps,
-          this.merkleTree.getHexRoot()
+          this.merkleTree.getHexRoot(),
+          0,
+          0
         );
     });
     let capacity = tenThousandPieces;
@@ -93,6 +95,11 @@ describe("Merkleroot Tests", function () {
         expect(result.erc721TokenIndex.toString()).to.be.equal(
           BigNumber.from(index).toString()
         );
+        await expect(
+          blueprint.connect(buyer).purchaseBlueprints(0, quantity, 0, proof, {
+            value: blueprintValue,
+          })
+        ).to.be.revertedWith("already claimed");
       });
     }
     it("2: should not allow non whitelisted user", async function () {
@@ -115,7 +122,9 @@ describe("Merkleroot Tests", function () {
           testUri,
           feeRecipients,
           feeBps,
-          "0x0000000000000000000000000000000000000000000000000000000000000000"
+          "0x0000000000000000000000000000000000000000000000000000000000000000",
+          0,
+          0
         );
       let result = await blueprint.blueprints(1);
       expect(result.saleState.toString()).to.be.equal(
