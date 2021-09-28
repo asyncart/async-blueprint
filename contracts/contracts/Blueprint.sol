@@ -14,7 +14,7 @@ contract Blueprint is
     AccessControlEnumerableUpgradeable
 {
     uint32 public defaultPlatformFeePercentage;
-    uint256 public latestErc721TokenIndex;
+    uint64 public latestErc721TokenIndex;
 
     address public asyncSaleFeesRecipient;
     mapping(uint256 => Blueprints) public blueprints;
@@ -33,21 +33,20 @@ contract Blueprint is
         paused
     }
     struct Blueprints {
-        SaleState saleState;
-        //0 for not started, 1 for started, 2 for paused
-        uint256 capacity;
-        uint256 price;
-        uint256 erc721TokenIndex;
-        uint256 mintAmountArtist;
-        uint256 mintAmountPlatform;
-        address ERC20Token;
+        uint32 mintAmountArtist;
+        uint32 mintAmountPlatform;
+        uint64 capacity;
+        uint128 price;
+        uint64 erc721TokenIndex;
         address artist;
+        SaleState saleState;
+        address ERC20Token;
         string randomSeedSigHash;
         string baseTokenUri;
-        address[] feeRecipients;
-        uint32[] feeBPS;
         bytes32 merkleroot;
         mapping(address => bool) claimedWhitelistedPieces;
+        address[] feeRecipients;
+        uint32[] feeBPS;
     }
 
     event BlueprintSeed(uint256 blueprintID, string randomSeed);
@@ -56,8 +55,8 @@ contract Blueprint is
         uint256 blueprintID,
         address artist,
         address purchaser,
-        uint256 quantity,
-        uint256 newCapacity,
+        uint32 quantity,
+        uint64 newCapacity,
         bytes32 seedPrefix
     );
 
@@ -76,13 +75,13 @@ contract Blueprint is
 
     modifier BuyerWhitelistedOrSaleStarted(
         uint256 _blueprintID,
-        uint256 _quantity,
+        uint32 _quantity,
         bytes32[] calldata proof
     ) {
         require(
             _hasSaleStarted(_blueprintID) ||
                 (_isBlueprintPreparedAndNotStarted(_blueprintID) &&
-                    userWhitelisted(_blueprintID, _quantity, proof)),
+                    userWhitelisted(_blueprintID, uint256(_quantity), proof)),
             "not available to purchase"
         );
         _;
@@ -90,7 +89,7 @@ contract Blueprint is
 
     modifier isQuantityAvailableForPurchase(
         uint256 _blueprintID,
-        uint256 _quantity
+        uint32 _quantity
     ) {
         require(
             blueprints[_blueprintID].capacity >= _quantity,
@@ -158,16 +157,16 @@ contract Blueprint is
 
     function prepareBlueprint(
         address _artist,
-        uint256 _capacity,
-        uint256 _price,
+        uint64 _capacity,
+        uint128 _price,
         address _erc20Token,
         string memory _randomSeedSigHash,
         string memory _baseTokenUri,
         address[] memory _feeRecipients,
         uint32[] memory _feeBps,
         bytes32 _merkleroot,
-        uint256 _mintAmountArtist,
-        uint256 _mintAmountPlatform
+        uint32 _mintAmountArtist,
+        uint32 _mintAmountPlatform
     ) external onlyRole(DEFAULT_ADMIN_ROLE) {
         uint256 _blueprintID = blueprintIndex;
         blueprints[_blueprintID].artist = _artist;
@@ -237,7 +236,7 @@ contract Blueprint is
 
     function purchaseBlueprints(
         uint256 blueprintID,
-        uint256 quantity,
+        uint32 quantity,
         uint256 tokenAmount,
         bytes32[] calldata proof
     )
@@ -261,7 +260,7 @@ contract Blueprint is
         }
     }
 
-    function preSaleMint(uint256 blueprintID, uint256 quantity) external {
+    function preSaleMint(uint256 blueprintID, uint32 quantity) external {
         require(
             _isBlueprintPreparedAndNotStarted(blueprintID),
             "Must be prepared and not started"
@@ -291,14 +290,14 @@ contract Blueprint is
     /*
      * Iterate and mint each blueprint for user
      */
-    function _mintQuantity(uint256 _blueprintID, uint256 _quantity) private {
-        for (uint256 i = 0; i < _quantity; i++) {
-            uint256 newTokenId = blueprints[_blueprintID].erc721TokenIndex;
+    function _mintQuantity(uint256 _blueprintID, uint32 _quantity) private {
+        for (uint16 i = 0; i < _quantity; i++) {
+            uint128 newTokenId = blueprints[_blueprintID].erc721TokenIndex;
             _mint(msg.sender, newTokenId);
             blueprints[_blueprintID].erc721TokenIndex += 1;
         }
         blueprints[_blueprintID].capacity -= _quantity;
-        uint256 newCap = blueprints[_blueprintID].capacity;
+        uint64 newCap = blueprints[_blueprintID].capacity;
 
         bytes32 prefixHash = keccak256(
             abi.encodePacked(
@@ -321,12 +320,12 @@ contract Blueprint is
 
     function _confirmPaymentAmountAndSettleSale(
         uint256 _blueprintID,
-        uint256 _quantity,
+        uint32 _quantity,
         uint256 _tokenAmount,
         address _artist
     ) internal {
         address _erc20Token = blueprints[_blueprintID].ERC20Token;
-        uint256 _price = blueprints[_blueprintID].price;
+        uint128 _price = blueprints[_blueprintID].price;
         if (_erc20Token == address(0)) {
             require(_tokenAmount == 0, "cannot specify token amount");
             require(
@@ -353,6 +352,11 @@ contract Blueprint is
     ////////////////////////////////////
     ////// MERKLEROOT FUNCTIONS ////////
     ////////////////////////////////////
+
+    /**
+     * Create a merkle tree with address: quantity pairs as the leaves.
+     * The msg.sender will be verified if it has a corresponding quantity value in the merkletree
+     */
 
     function _leaf(address account, uint256 quantity)
         internal
