@@ -152,8 +152,6 @@ contract Blueprint is
         platform = msg.sender;
 
         defaultPlatformFeePercentage = 500; //5%
-        //TODO Should tokenID start at 0 or 1?
-        // latestErc721TokenIndex = 1;
 
         asyncSaleFeesRecipient = msg.sender;
     }
@@ -385,6 +383,7 @@ contract Blueprint is
 
     function revealBlueprintSeed(uint256 blueprintID, string memory randomSeed)
         external
+        isBlueprintPrepared(blueprintID)
     {
         emit BlueprintSeed(blueprintID, randomSeed);
     }

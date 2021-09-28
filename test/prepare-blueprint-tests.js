@@ -12,9 +12,6 @@ const testHash = "fbejgnvnveorjgnt";
 const tenThousandPieces = 10000;
 const zero = BigNumber.from(0).toString();
 
-const emptyFeeRecipients = [];
-const emptyFeePercentages = [];
-
 function hashToken(account, quantity) {
   return Buffer.from(
     ethers.utils
