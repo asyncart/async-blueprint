@@ -135,7 +135,9 @@ describe("Merkleroot Tests", function () {
       expect(result.capacity.toString()).to.be.equal(
         BigNumber.from(tenThousandPieces).toString()
       );
-      expect(result.erc721TokenIndex.toString()).to.be.equal(zero);
+      expect(result.erc721TokenIndex.toString()).to.be.equal(
+        tenThousandPieces.toString()
+      );
       expect(result.randomSeedSigHash).to.be.equal(testHash);
       expect(result.baseTokenUri).to.be.equal(testUri);
 

@@ -198,6 +198,10 @@ contract Blueprint is
         blueprints[_blueprintID].mintAmountPlatform = _mintAmountPlatform;
 
         blueprints[_blueprintID].saleState = SaleState.not_started;
+        //assign the erc721 token index to the blueprint
+        blueprints[_blueprintID].erc721TokenIndex = latestErc721TokenIndex;
+        latestErc721TokenIndex += _capacity;
+
         blueprintIndex++;
     }
 
@@ -210,9 +214,6 @@ contract Blueprint is
             "sale started or not prepared"
         );
         blueprints[blueprintID].saleState = SaleState.started;
-        //assign the erc721 token index to the blueprint
-        blueprints[blueprintID].erc721TokenIndex = latestErc721TokenIndex;
-        latestErc721TokenIndex += (blueprints[blueprintID].capacity);
     }
 
     function pauseSale(uint256 blueprintID)
@@ -485,7 +486,7 @@ contract Blueprint is
         returns (address[] memory)
     {
         if (blueprints[id].feeRecipients.length == 0) {
-            address[] memory feeRecipients = new address[](2);
+            address[] memory feeRecipients = new address[](1);
             feeRecipients[0] = (asyncSaleFeesRecipient);
             return feeRecipients;
         } else {
@@ -500,7 +501,7 @@ contract Blueprint is
         returns (uint32[] memory)
     {
         if (blueprints[id].feeBPS.length == 0) {
-            uint32[] memory feeBPS = new uint32[](2);
+            uint32[] memory feeBPS = new uint32[](1);
             feeBPS[0] = defaultPlatformFeePercentage;
 
             return feeBPS;
