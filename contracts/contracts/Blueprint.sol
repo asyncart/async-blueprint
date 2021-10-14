@@ -486,7 +486,7 @@ contract Blueprint is
         returns (address[] memory)
     {
         if (blueprints[id].feeRecipients.length == 0) {
-            address[] memory feeRecipients = new address[](2);
+            address[] memory feeRecipients = new address[](1);
             feeRecipients[0] = (asyncSaleFeesRecipient);
             return feeRecipients;
         } else {
@@ -501,7 +501,7 @@ contract Blueprint is
         returns (uint32[] memory)
     {
         if (blueprints[id].feeBPS.length == 0) {
-            uint32[] memory feeBPS = new uint32[](2);
+            uint32[] memory feeBPS = new uint32[](1);
             feeBPS[0] = defaultPlatformFeePercentage;
 
             return feeBPS;
