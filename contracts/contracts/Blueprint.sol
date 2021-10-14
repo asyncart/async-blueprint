@@ -291,11 +291,13 @@ contract Blueprint is
      * Iterate and mint each blueprint for user
      */
     function _mintQuantity(uint256 _blueprintID, uint32 _quantity) private {
+        uint128 newTokenId = blueprints[_blueprintID].erc721TokenIndex;
+
         for (uint16 i = 0; i < _quantity; i++) {
-            uint128 newTokenId = blueprints[_blueprintID].erc721TokenIndex;
-            _mint(msg.sender, newTokenId);
-            blueprints[_blueprintID].erc721TokenIndex += 1;
+            _mint(msg.sender, newTokenId + i);
         }
+
+        blueprints[_blueprintID].erc721TokenIndex += _quantity;
         blueprints[_blueprintID].capacity -= _quantity;
         uint64 newCap = blueprints[_blueprintID].capacity;
 
