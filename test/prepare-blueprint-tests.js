@@ -75,7 +75,6 @@ describe("Prepare Blueprint", function () {
         BigNumber.from(tenThousandPieces).toString()
       );
       expect(result.erc721TokenIndex.toString()).to.be.equal(zero);
-      expect(result.randomSeedSigHash).to.be.equal(testHash);
       expect(result.baseTokenUri).to.be.equal(testUri);
     });
     it("2: should allow user to not specify fees", async function () {

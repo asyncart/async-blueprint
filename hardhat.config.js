@@ -11,7 +11,7 @@ const {
   alchemyUrl,
   etherscanApiKey,
   coinmarketCapKey,
-} = require("./secretsManager.example.js");
+} = require("./secretsManager.js");
 
 module.exports = {
   solidity: {

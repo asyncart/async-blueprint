@@ -138,7 +138,6 @@ describe("Merkleroot Tests", function () {
       expect(result.erc721TokenIndex.toString()).to.be.equal(
         tenThousandPieces.toString()
       );
-      expect(result.randomSeedSigHash).to.be.equal(testHash);
       expect(result.baseTokenUri).to.be.equal(testUri);
 
       const proof = this.merkleTree.getHexProof(hashToken(user1.address, 10));
