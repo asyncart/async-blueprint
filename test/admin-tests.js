@@ -39,12 +39,13 @@ describe("Admin Blueprint Tests", function () {
         zeroAddress,
         testHash,
         testUri,
-        feeRecipients,
-        feeBps,
         "0x0000000000000000000000000000000000000000000000000000000000000000",
         0,
         0
       );
+    await blueprint
+      .connect(user2)
+      .setFeeRecipients(0, feeRecipients, feeBps, [], []);
     let result = await blueprint.blueprints(0);
     expect(result.artist).to.be.equal(testArtist.address);
   });
@@ -58,12 +59,13 @@ describe("Admin Blueprint Tests", function () {
         zeroAddress,
         testHash,
         testUri,
-        feeRecipients,
-        feeBps,
         "0x0000000000000000000000000000000000000000000000000000000000000000",
         0,
         0
       );
+    await blueprint
+      .connect(ContractOwner)
+      .setFeeRecipients(0, feeRecipients, feeBps, [], []);
     let updatedUri = "http://updatedUri/";
     await blueprint.connect(ContractOwner).updateBaseTokenUri(0, updatedUri);
     let result = await blueprint.blueprints(0);
@@ -85,8 +87,6 @@ describe("Admin Blueprint Tests", function () {
         zeroAddress,
         testHash,
         testUri,
-        feeRecipients,
-        feeBps,
         "0x0000000000000000000000000000000000000000000000000000000000000000",
         0,
         0
@@ -104,13 +104,43 @@ describe("Admin Blueprint Tests", function () {
   it("6: should allow owner to change default Platform Fee Percentage", async function () {
     await blueprint
       .connect(ContractOwner)
-      .changedefaultPlatformFeePercentage(6000);
-    let result = await blueprint.defaultPlatformFeePercentage();
+      .changedefaultPlatformPrimaryFeePercentage(6000);
+    let result = await blueprint.defaultPlatformPrimaryFeePercentage();
     expect(result.toString()).to.be.equal(BigNumber.from(6000).toString());
   });
-  it("7: should not allow owner to change default Blueprint Fee Percentage above 10000", async function () {
+  it("7: should not allow owner to change default Platform Fee Percentage above 10000", async function () {
     await expect(
-      blueprint.connect(ContractOwner).changedefaultPlatformFeePercentage(10600)
+      blueprint
+        .connect(ContractOwner)
+        .changedefaultPlatformPrimaryFeePercentage(10600)
+    ).to.be.revertedWith("");
+  });
+  it("8: should allow owner to change default  Secondary Fee Percentage", async function () {
+    await blueprint
+      .connect(ContractOwner)
+      .changedefaultBlueprintSecondarySalePercentage(3000);
+    let result = await blueprint.defaultBlueprintSecondarySalePercentage();
+    expect(result.toString()).to.be.equal(BigNumber.from(3000).toString());
+  });
+  it("9: should not allow owner to change default  Secondary Fee Percentage above 10000", async function () {
+    await expect(
+      blueprint
+        .connect(ContractOwner)
+        .changedefaultBlueprintSecondarySalePercentage(10600)
+    ).to.be.revertedWith("");
+  });
+  it("10: should allow owner to change default Platform Secondary Fee Percentage", async function () {
+    await blueprint
+      .connect(ContractOwner)
+      .changeDefaultPlatformSecondarySalePercentage(3000);
+    let result = await blueprint.defaultPlatformSecondarySalePercentage();
+    expect(result.toString()).to.be.equal(BigNumber.from(3000).toString());
+  });
+  it("11: should not allow owner to change default Platform Secondary Fee Percentage above 10000", async function () {
+    await expect(
+      blueprint
+        .connect(ContractOwner)
+        .changeDefaultPlatformSecondarySalePercentage(10600)
     ).to.be.revertedWith("");
   });
 });

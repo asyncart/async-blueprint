@@ -14,13 +14,6 @@ const zero = BigNumber.from(0).toString();
 const testPlatformPreSaleMintQuantity = 15;
 const testArtistPreSaleMintQuantity = 17;
 
-const tenPieces = 10;
-
-const sale_notPrepared = BigNumber.from(0).toString();
-const sale_notStarted = BigNumber.from(1).toString();
-const sale_started = BigNumber.from(2).toString();
-const sale_paused = BigNumber.from(3).toString();
-
 function hashToken(account, quantity) {
   return Buffer.from(
     ethers.utils
@@ -65,12 +58,13 @@ describe("Blueprint presale minting", function () {
           zeroAddress,
           testHash,
           testUri,
-          feeRecipients,
-          feeBps,
           this.merkleTree.getHexRoot(),
           testArtistPreSaleMintQuantity,
           testPlatformPreSaleMintQuantity
         );
+      await blueprint
+        .connect(ContractOwner)
+        .setFeeRecipients(0, feeRecipients, feeBps, [], []);
     });
     it("1: Should allow the platform to mint presale", async function () {
       await blueprint

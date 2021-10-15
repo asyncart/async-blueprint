@@ -67,16 +67,15 @@ contract Blueprint is
         uint256 blueprintID,
         address artist,
         uint64 capacity,
-        uint128 price,
-        address erc20Token,
         string blueprintMetaData,
-        string baseTokenUri,
-        address[] primaryFeeRecipients,
-        uint32[] primaryFeeBPS,
-        bytes32 merkleroot,
-        uint32 mintAmountArtist,
-        uint32 mintAmountPlatform
+        string baseTokenUri
     );
+
+    event SaleStarted(uint256 blueprintID);
+
+    event SalePaused(uint256 blueprintID);
+
+    event SaleUnpaused(uint256 blueprintID);
 
     modifier isBlueprintPrepared(uint256 _blueprintID) {
         require(
@@ -154,6 +153,51 @@ contract Blueprint is
         return _verify(_leaf(msg.sender, _quantity), _merkleroot, proof);
     }
 
+    function feesApplicable(
+        address[] memory _feeRecipients,
+        uint32[] memory _feeBPS
+    ) internal view returns (bool) {
+        if (_feeRecipients.length != 0 || _feeBPS.length != 0) {
+            require(
+                _feeRecipients.length == _feeBPS.length,
+                "mismatched recipients & Bps"
+            );
+            uint32 totalPercent;
+            for (uint256 i = 0; i < _feeBPS.length; i++) {
+                totalPercent = totalPercent + _feeBPS[i];
+            }
+            require(totalPercent <= 10000, "Fee Bps exceed maximum");
+            return true;
+        }
+        return false;
+    }
+
+    function setBlueprintPrepared(
+        uint256 _blueprintID,
+        string memory _blueprintMetaData
+    ) internal {
+        blueprints[_blueprintID].saleState = SaleState.not_started;
+        //assign the erc721 token index to the blueprint
+        blueprints[_blueprintID].erc721TokenIndex = latestErc721TokenIndex;
+        uint64 _capacity = blueprints[_blueprintID].capacity;
+        latestErc721TokenIndex += _capacity;
+        blueprintIndex++;
+
+        emit BlueprintPrepared(
+            _blueprintID,
+            blueprints[_blueprintID].artist,
+            _capacity,
+            _blueprintMetaData,
+            blueprints[_blueprintID].baseTokenUri
+        );
+    }
+
+    function setErc20Token(uint256 _blueprintID, address _erc20Token) internal {
+        if (_erc20Token != address(0)) {
+            blueprints[_blueprintID].ERC20Token = _erc20Token;
+        }
+    }
+
     function initialize(string memory name_, string memory symbol_)
         public
         initializer
@@ -173,6 +217,26 @@ contract Blueprint is
         asyncSaleFeesRecipient = msg.sender;
     }
 
+    function _setupBlueprint(
+        uint256 _blueprintID,
+        address _erc20Token,
+        string memory _baseTokenUri,
+        bytes32 _merkleroot,
+        uint32 _mintAmountArtist,
+        uint32 _mintAmountPlatform
+    ) internal {
+        setErc20Token(_blueprintID, _erc20Token);
+
+        blueprints[_blueprintID].baseTokenUri = _baseTokenUri;
+
+        if (_merkleroot != 0) {
+            blueprints[_blueprintID].merkleroot = _merkleroot;
+        }
+
+        blueprints[_blueprintID].mintAmountArtist = _mintAmountArtist;
+        blueprints[_blueprintID].mintAmountPlatform = _mintAmountPlatform;
+    }
+
     function prepareBlueprint(
         address _artist,
         uint64 _capacity,
@@ -180,11 +244,6 @@ contract Blueprint is
         address _erc20Token,
         string memory _blueprintMetaData,
         string memory _baseTokenUri,
-        address[] memory _primaryFeeRecipients,
-        uint32[] memory _primaryFeeBPS,
-        address[] memory _secondaryFeeRecipients,
-        uint32[] memory _secondaryFeeBPS,
-        //TODO add secondary sale recipients
         bytes32 _merkleroot,
         uint32 _mintAmountArtist,
         uint32 _mintAmountPlatform
@@ -193,38 +252,40 @@ contract Blueprint is
         blueprints[_blueprintID].artist = _artist;
         blueprints[_blueprintID].capacity = _capacity;
         blueprints[_blueprintID].price = _price;
-        if (_erc20Token != address(0)) {
-            blueprints[_blueprintID].ERC20Token = _erc20Token;
-        }
-        blueprints[_blueprintID].baseTokenUri = _baseTokenUri;
-        if (_primaryFeeRecipients.length != 0 || _primaryFeeBPS.length != 0) {
-            require(
-                _primaryFeeRecipients.length == _primaryFeeBPS.length,
-                "mismatched recipients & Bps"
-            );
-            uint32 totalPercent;
-            for (uint256 i = 0; i < _primaryFeeBPS.length; i++) {
-                totalPercent = totalPercent + _primaryFeeBPS[i];
-            }
-            require(totalPercent <= 10000, "Fee Bps exceed maximum");
+
+        _setupBlueprint(
+            _blueprintID,
+            _erc20Token,
+            _baseTokenUri,
+            _merkleroot,
+            _mintAmountArtist,
+            _mintAmountPlatform
+        );
+        setBlueprintPrepared(_blueprintID, _blueprintMetaData);
+    }
+
+    function setFeeRecipients(
+        uint256 _blueprintID,
+        address[] memory _primaryFeeRecipients,
+        uint32[] memory _primaryFeeBPS,
+        address[] memory _secondaryFeeRecipients,
+        uint32[] memory _secondaryFeeBPS
+    ) external onlyRole(DEFAULT_ADMIN_ROLE) {
+        require(
+            blueprints[_blueprintID].saleState == SaleState.not_started,
+            "sale started or not prepared"
+        );
+        if (feesApplicable(_primaryFeeRecipients, _primaryFeeBPS)) {
             blueprints[_blueprintID]
                 .primaryFeeRecipients = _primaryFeeRecipients;
             blueprints[_blueprintID].primaryFeeBPS = _primaryFeeBPS;
         }
 
-        if (_merkleroot != 0) {
-            blueprints[_blueprintID].merkleroot = _merkleroot;
+        if (feesApplicable(_secondaryFeeRecipients, _secondaryFeeBPS)) {
+            blueprints[_blueprintID]
+                .secondaryFeeRecipients = _secondaryFeeRecipients;
+            blueprints[_blueprintID].secondaryFeeBPS = _secondaryFeeBPS;
         }
-
-        blueprints[_blueprintID].mintAmountArtist = _mintAmountArtist;
-        blueprints[_blueprintID].mintAmountPlatform = _mintAmountPlatform;
-
-        blueprints[_blueprintID].saleState = SaleState.not_started;
-        //assign the erc721 token index to the blueprint
-        blueprints[_blueprintID].erc721TokenIndex = latestErc721TokenIndex;
-        latestErc721TokenIndex += _capacity;
-
-        blueprintIndex++;
     }
 
     function beginSale(uint256 blueprintID)
@@ -236,6 +297,7 @@ contract Blueprint is
             "sale started or not prepared"
         );
         blueprints[blueprintID].saleState = SaleState.started;
+        emit SaleStarted(blueprintID);
     }
 
     function pauseSale(uint256 blueprintID)
@@ -244,6 +306,7 @@ contract Blueprint is
         hasSaleStarted(blueprintID)
     {
         blueprints[blueprintID].saleState = SaleState.paused;
+        emit SalePaused(blueprintID);
     }
 
     function unpauseSale(uint256 blueprintID)
@@ -255,6 +318,7 @@ contract Blueprint is
             "Sale not paused"
         );
         blueprints[blueprintID].saleState = SaleState.started;
+        emit SaleUnpaused(blueprintID);
     }
 
     function purchaseBlueprints(
@@ -431,6 +495,24 @@ contract Blueprint is
         defaultPlatformPrimaryFeePercentage = _basisPoints;
     }
 
+    function changedefaultBlueprintSecondarySalePercentage(uint32 _basisPoints)
+        external
+        onlyRole(DEFAULT_ADMIN_ROLE)
+    {
+        require(_basisPoints + defaultPlatformSecondarySalePercentage <= 10000);
+        defaultBlueprintSecondarySalePercentage = _basisPoints;
+    }
+
+    function changeDefaultPlatformSecondarySalePercentage(uint32 _basisPoints)
+        external
+        onlyRole(DEFAULT_ADMIN_ROLE)
+    {
+        require(
+            _basisPoints + defaultBlueprintSecondarySalePercentage <= 10000
+        );
+        defaultPlatformSecondarySalePercentage = _basisPoints;
+    }
+
     function updatePlatformAddress(address _platform)
         external
         onlyRole(DEFAULT_ADMIN_ROLE)
@@ -462,8 +544,9 @@ contract Blueprint is
             feesPaid = feesPaid + fee;
             _payout(_primaryFeeRecipients[i], _erc20Token, fee);
         }
-
-        _payout(_artist, _erc20Token, (_amount - feesPaid));
+        if (_amount - feesPaid > 0) {
+            _payout(_artist, _erc20Token, (_amount - feesPaid));
+        }
     }
 
     function _payout(

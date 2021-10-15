@@ -14,8 +14,6 @@ const zero = BigNumber.from(0).toString();
 
 const tenPieces = 10;
 
-const sale_notPrepared = BigNumber.from(0).toString();
-const sale_notStarted = BigNumber.from(1).toString();
 const sale_started = BigNumber.from(2).toString();
 const sale_paused = BigNumber.from(3).toString();
 
@@ -63,12 +61,13 @@ describe("Blueprint Sales", function () {
           zeroAddress,
           testHash,
           testUri,
-          feeRecipients,
-          feeBps,
           this.merkleTree.getHexRoot(),
           0,
           0
         );
+      await blueprint
+        .connect(ContractOwner)
+        .setFeeRecipients(0, feeRecipients, feeBps, [], []);
       await blueprint.connect(ContractOwner).beginSale(0);
     });
     it("1: should begin sale of blueprint", async function () {
@@ -108,8 +107,6 @@ describe("Blueprint Sales", function () {
           zeroAddress,
           testHash + "dsfdk",
           testUri + "unpause_test",
-          feeRecipients,
-          feeBps,
           this.merkleTree.getHexRoot(),
           0,
           0
@@ -201,8 +198,6 @@ describe("Blueprint Sales", function () {
             zeroAddress,
             testHash + "dsfdk",
             testUri + "_test",
-            [],
-            [],
             this.merkleTree.getHexRoot(),
             0,
             0
