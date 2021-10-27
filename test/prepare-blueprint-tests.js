@@ -58,12 +58,13 @@ describe("Prepare Blueprint", function () {
           zeroAddress,
           testHash,
           testUri,
-          feeRecipients,
-          feeBps,
           this.merkleTree.getHexRoot(),
           0,
           0
         );
+      await blueprint
+        .connect(ContractOwner)
+        .setFeeRecipients(0, feeRecipients, feeBps, [], []);
 
       let result = await blueprint.blueprints(0);
       expect(result.saleState.toString()).to.be.equal(
@@ -75,13 +76,9 @@ describe("Prepare Blueprint", function () {
         BigNumber.from(tenThousandPieces).toString()
       );
       expect(result.erc721TokenIndex.toString()).to.be.equal(zero);
-      expect(result.randomSeedSigHash).to.be.equal(testHash);
       expect(result.baseTokenUri).to.be.equal(testUri);
     });
     it("2: should allow user to not specify fees", async function () {
-      let emptyFeeRecipients = [];
-      let emptyFeePercentages = [];
-
       await blueprint
         .connect(ContractOwner)
         .prepareBlueprint(
@@ -91,8 +88,6 @@ describe("Prepare Blueprint", function () {
           zeroAddress,
           testHash,
           testUri,
-          emptyFeeRecipients,
-          emptyFeePercentages,
           this.merkleTree.getHexRoot(),
           0,
           0
@@ -102,42 +97,45 @@ describe("Prepare Blueprint", function () {
     });
     it("3: should not allow mismatched fee recipients", async function () {
       let misFeeRecips = [testArtist.address];
+      await blueprint
+        .connect(ContractOwner)
+        .prepareBlueprint(
+          testArtist.address,
+          tenThousandPieces,
+          oneEth,
+          zeroAddress,
+          testHash,
+          testUri,
+          this.merkleTree.getHexRoot(),
+          0,
+          0
+        );
+
       await expect(
         blueprint
           .connect(ContractOwner)
-          .prepareBlueprint(
-            testArtist.address,
-            tenThousandPieces,
-            oneEth,
-            zeroAddress,
-            testHash,
-            testUri,
-            misFeeRecips,
-            feeBps,
-            this.merkleTree.getHexRoot(),
-            0,
-            0
-          )
+          .setFeeRecipients(0, misFeeRecips, feeBps, [], [])
       ).to.be.revertedWith("mismatched recipients & Bps");
     });
     it("4: should not allow fee bps to exceed 10000", async function () {
       let mismatchBps = [5000, 6000];
+      await blueprint
+        .connect(ContractOwner)
+        .prepareBlueprint(
+          testArtist.address,
+          tenThousandPieces,
+          oneEth,
+          zeroAddress,
+          testHash,
+          testUri,
+          this.merkleTree.getHexRoot(),
+          0,
+          0
+        );
       await expect(
         blueprint
           .connect(ContractOwner)
-          .prepareBlueprint(
-            testArtist.address,
-            tenThousandPieces,
-            oneEth,
-            zeroAddress,
-            testHash,
-            testUri,
-            feeRecipients,
-            mismatchBps,
-            this.merkleTree.getHexRoot(),
-            0,
-            0
-          )
+          .setFeeRecipients(0, feeRecipients, mismatchBps, [], [])
       ).to.be.revertedWith("Fee Bps exceed maximum");
     });
     it("5: should not allow sale for unprepared blueprint", async function () {

@@ -62,12 +62,13 @@ describe("Merkleroot Tests", function () {
           zeroAddress,
           testHash,
           testUri,
-          feeRecipients,
-          feeBps,
           this.merkleTree.getHexRoot(),
           0,
           0
         );
+      await blueprint
+        .connect(ContractOwner)
+        .setFeeRecipients(0, feeRecipients, feeBps, [], []);
     });
     let capacity = tenThousandPieces;
     let index = BigNumber.from(0);
@@ -120,8 +121,6 @@ describe("Merkleroot Tests", function () {
           zeroAddress,
           testHash,
           testUri,
-          feeRecipients,
-          feeBps,
           "0x0000000000000000000000000000000000000000000000000000000000000000",
           0,
           0
@@ -138,7 +137,6 @@ describe("Merkleroot Tests", function () {
       expect(result.erc721TokenIndex.toString()).to.be.equal(
         tenThousandPieces.toString()
       );
-      expect(result.randomSeedSigHash).to.be.equal(testHash);
       expect(result.baseTokenUri).to.be.equal(testUri);
 
       const proof = this.merkleTree.getHexProof(hashToken(user1.address, 10));

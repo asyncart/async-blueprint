@@ -83,12 +83,13 @@ describe("ERC20 interactions", function () {
           erc20.address,
           testHash,
           testUri,
-          feeRecipients,
-          feeBps,
           this.merkleTree.getHexRoot(),
           0,
           0
         );
+      await blueprint
+        .connect(ContractOwner)
+        .setFeeRecipients(0, feeRecipients, feeBps, [], []);
       await blueprint.connect(ContractOwner).beginSale(0);
     });
     it("1: should begin sale of blueprint", async function () {
@@ -122,18 +123,18 @@ describe("ERC20 interactions", function () {
           zeroAddress,
           testHash + "dsfdk",
           testUri + "unpause_test",
-          feeRecipients,
-          feeBps,
           this.merkleTree.getHexRoot(),
           0,
           0
         );
+      await blueprint
+        .connect(ContractOwner)
+        .setFeeRecipients(1, feeRecipients, feeBps, feeRecipients, feeBps);
       await expect(
         blueprint.connect(ContractOwner).pauseSale(1)
       ).to.be.revertedWith("Sale not started");
     });
     it("5: should allow users to purchase blueprints", async function () {
-      let blueprintValue = BigNumber.from(tenPieces).mul(oneEth);
       await blueprint
         .connect(user2)
         .purchaseBlueprints(0, tenPieces, tenEth, []);
@@ -169,7 +170,6 @@ describe("ERC20 interactions", function () {
         );
       });
       it("2: should not allow user to specify an Eth amount", async function () {
-        let blueprintValue = BigNumber.from(tenPieces).mul(oneEth);
         await expect(
           blueprint
             .connect(user2)
