@@ -99,3 +99,7 @@ create a secretManager.js containing the required private keys(see secretsManage
 ```sh
 $ yarn deploy-rinkeby
 ```
+
+Latest deployment is available at address: 0x5A22c8f3B906e98327a7F16dd122f4DE13888Ea5
+https://rinkeby.etherscan.io/address/0x5A22c8f3B906e98327a7F16dd122f4DE13888Ea5#code
+✨
