@@ -104,8 +104,12 @@ To verify the contract on rinkeby
 
 ```sh
 yarn verify <implementation_address>
+```
 
 Latest deployment is available at address: 0xbd3008b9383a5d5639f7e1c34e2eb6e6a13bd0f9
 https://rinkeby.etherscan.io/address/0xbd3008b9383a5d5639f7e1c34e2eb6e6a13bd0f9#code
 ✨
+
+```
+
 ```
