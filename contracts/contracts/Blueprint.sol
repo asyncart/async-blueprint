@@ -13,10 +13,14 @@ contract Blueprint is
     HasSecondarySaleFees,
     AccessControlEnumerableUpgradeable
 {
+    using StringsUpgradeable for uint256;
+
     uint32 public defaultPlatformPrimaryFeePercentage;
     uint64 public latestErc721TokenIndex;
     uint32 public defaultBlueprintSecondarySalePercentage;
     uint32 public defaultPlatformSecondarySalePercentage;
+
+    string public baseTokenUri;
 
     address public asyncSaleFeesRecipient;
     mapping(uint256 => Blueprints) public blueprints;
@@ -24,9 +28,11 @@ contract Blueprint is
 
     uint256 public blueprintIndex;
 
-    address platform;
+    address public platform;
+    address public minterAddress;
 
     bytes32 public constant OPERATOR_ROLE = keccak256("OPERATOR_ROLE");
+    bytes32 public constant MINTER_ROLE = keccak256("MINTER_ROLE");
 
     enum SaleState {
         not_prepared,
@@ -42,6 +48,7 @@ contract Blueprint is
         uint64 erc721TokenIndex;
         address artist;
         SaleState saleState;
+        bool tokenUriLocked;
         address ERC20Token;
         string baseTokenUri;
         bytes32 merkleroot;
@@ -76,6 +83,8 @@ contract Blueprint is
     event SalePaused(uint256 blueprintID);
 
     event SaleUnpaused(uint256 blueprintID);
+
+    event BlueprintTokenUriUpdated(uint256 blueprintID, string newBaseTokenUri);
 
     modifier isBlueprintPrepared(uint256 _blueprintID) {
         require(
@@ -113,6 +122,31 @@ contract Blueprint is
             "quantity exceeds capacity"
         );
         _;
+    }
+
+    ///
+    ///Initialize the implementation
+    ///
+    function initialize(
+        string memory name_,
+        string memory symbol_,
+        address minter
+    ) public initializer {
+        // Intialize parent contracts
+        ERC721Upgradeable.__ERC721_init(name_, symbol_);
+        HasSecondarySaleFees._initialize();
+        AccessControlUpgradeable.__AccessControl_init();
+
+        _setupRole(DEFAULT_ADMIN_ROLE, msg.sender);
+        _setupRole(OPERATOR_ROLE, msg.sender);
+        _setupRole(MINTER_ROLE, msg.sender);
+
+        platform = msg.sender;
+        minterAddress = minter;
+
+        defaultPlatformPrimaryFeePercentage = 500; //5%
+
+        asyncSaleFeesRecipient = msg.sender;
     }
 
     function _hasSaleStarted(uint256 _blueprintID)
@@ -156,7 +190,7 @@ contract Blueprint is
     function feesApplicable(
         address[] memory _feeRecipients,
         uint32[] memory _feeBPS
-    ) internal view returns (bool) {
+    ) internal pure returns (bool) {
         if (_feeRecipients.length != 0 || _feeBPS.length != 0) {
             require(
                 _feeRecipients.length == _feeBPS.length,
@@ -198,25 +232,6 @@ contract Blueprint is
         }
     }
 
-    function initialize(string memory name_, string memory symbol_)
-        public
-        initializer
-    {
-        // Intialize parent contracts
-        ERC721Upgradeable.__ERC721_init(name_, symbol_);
-        HasSecondarySaleFees._initialize();
-        AccessControlUpgradeable.__AccessControl_init();
-
-        _setupRole(DEFAULT_ADMIN_ROLE, msg.sender);
-        _setupRole(OPERATOR_ROLE, msg.sender);
-
-        platform = msg.sender;
-
-        defaultPlatformPrimaryFeePercentage = 500; //5%
-
-        asyncSaleFeesRecipient = msg.sender;
-    }
-
     function _setupBlueprint(
         uint256 _blueprintID,
         address _erc20Token,
@@ -247,7 +262,7 @@ contract Blueprint is
         bytes32 _merkleroot,
         uint32 _mintAmountArtist,
         uint32 _mintAmountPlatform
-    ) external onlyRole(DEFAULT_ADMIN_ROLE) {
+    ) external onlyRole(MINTER_ROLE) {
         uint256 _blueprintID = blueprintIndex;
         blueprints[_blueprintID].artist = _artist;
         blueprints[_blueprintID].capacity = _capacity;
@@ -270,7 +285,7 @@ contract Blueprint is
         uint32[] memory _primaryFeeBPS,
         address[] memory _secondaryFeeRecipients,
         uint32[] memory _secondaryFeeBPS
-    ) external onlyRole(DEFAULT_ADMIN_ROLE) {
+    ) external onlyRole(MINTER_ROLE) {
         require(
             blueprints[_blueprintID].saleState == SaleState.not_started,
             "sale started or not prepared"
@@ -288,10 +303,7 @@ contract Blueprint is
         }
     }
 
-    function beginSale(uint256 blueprintID)
-        external
-        onlyRole(DEFAULT_ADMIN_ROLE)
-    {
+    function beginSale(uint256 blueprintID) external onlyRole(MINTER_ROLE) {
         require(
             blueprints[blueprintID].saleState == SaleState.not_started,
             "sale started or not prepared"
@@ -302,17 +314,14 @@ contract Blueprint is
 
     function pauseSale(uint256 blueprintID)
         external
-        onlyRole(DEFAULT_ADMIN_ROLE)
+        onlyRole(MINTER_ROLE)
         hasSaleStarted(blueprintID)
     {
         blueprints[blueprintID].saleState = SaleState.paused;
         emit SalePaused(blueprintID);
     }
 
-    function unpauseSale(uint256 blueprintID)
-        external
-        onlyRole(DEFAULT_ADMIN_ROLE)
-    {
+    function unpauseSale(uint256 blueprintID) external onlyRole(MINTER_ROLE) {
         require(
             blueprints[blueprintID].saleState == SaleState.paused,
             "Sale not paused"
@@ -353,12 +362,12 @@ contract Blueprint is
             "Must be prepared and not started"
         );
         require(
-            platform == msg.sender ||
+            minterAddress == msg.sender ||
                 blueprints[blueprintID].artist == msg.sender,
             "user cannot mint presale"
         );
 
-        if (platform == msg.sender) {
+        if (minterAddress == msg.sender) {
             require(
                 quantity <= blueprints[blueprintID].mintAmountPlatform,
                 "cannot mint quantity"
@@ -465,16 +474,74 @@ contract Blueprint is
     /// ONLY ADMIN functions ///
     ////////////////////////////
 
-    function updateBaseTokenUri(
+    function updateBlueprintTokenUri(
         uint256 blueprintID,
         string memory newBaseTokenUri
     ) external onlyRole(DEFAULT_ADMIN_ROLE) isBlueprintPrepared(blueprintID) {
+        require(
+            !blueprints[blueprintID].tokenUriLocked,
+            "blueprint URI locked"
+        );
+
         blueprints[blueprintID].baseTokenUri = newBaseTokenUri;
+
+        emit BlueprintTokenUriUpdated(blueprintID, newBaseTokenUri);
+    }
+
+    function lockBlueprintTokenUri(uint256 blueprintID)
+        external
+        onlyRole(DEFAULT_ADMIN_ROLE)
+        isBlueprintPrepared(blueprintID)
+    {
+        require(
+            !blueprints[blueprintID].tokenUriLocked,
+            "blueprint URI locked"
+        );
+
+        blueprints[blueprintID].tokenUriLocked = true;
+    }
+
+    function setBaseTokenUri(string memory _baseTokenUri)
+        external
+        onlyRole(DEFAULT_ADMIN_ROLE)
+    {
+        baseTokenUri = _baseTokenUri;
+    }
+
+    function _baseURI() internal view virtual override returns (string memory) {
+        return baseTokenUri;
+    }
+
+    function tokenURI(uint256 tokenId)
+        public
+        view
+        virtual
+        override
+        returns (string memory)
+    {
+        require(
+            _exists(tokenId),
+            "ERC721Metadata: URI query for nonexistent token"
+        );
+
+        string memory baseURI = _baseURI();
+        return
+            bytes(baseURI).length > 0
+                ? string(
+                    abi.encodePacked(
+                        baseURI,
+                        "/",
+                        tokenId.toString(),
+                        "/",
+                        "token.json"
+                    )
+                )
+                : "";
     }
 
     function revealBlueprintSeed(uint256 blueprintID, string memory randomSeed)
         external
-        onlyRole(DEFAULT_ADMIN_ROLE)
+        onlyRole(MINTER_ROLE)
         isBlueprintPrepared(blueprintID)
     {
         emit BlueprintSeed(blueprintID, randomSeed);
@@ -487,7 +554,7 @@ contract Blueprint is
         asyncSaleFeesRecipient = _asyncSaleFeesRecipient;
     }
 
-    function changedefaultPlatformPrimaryFeePercentage(uint32 _basisPoints)
+    function changeDefaultPlatformPrimaryFeePercentage(uint32 _basisPoints)
         external
         onlyRole(DEFAULT_ADMIN_ROLE)
     {
@@ -495,7 +562,7 @@ contract Blueprint is
         defaultPlatformPrimaryFeePercentage = _basisPoints;
     }
 
-    function changedefaultBlueprintSecondarySalePercentage(uint32 _basisPoints)
+    function changeDefaultBlueprintSecondarySalePercentage(uint32 _basisPoints)
         external
         onlyRole(DEFAULT_ADMIN_ROLE)
     {
@@ -519,8 +586,19 @@ contract Blueprint is
     {
         grantRole(DEFAULT_ADMIN_ROLE, _platform);
 
-        revokeRole(DEFAULT_ADMIN_ROLE, msg.sender);
+        revokeRole(DEFAULT_ADMIN_ROLE, platform);
         platform = _platform;
+    }
+
+    // Allows the platform to change the minter address
+    function updateMinterAddress(address newMinterAddress)
+        external
+        onlyRole(DEFAULT_ADMIN_ROLE)
+    {
+        grantRole(MINTER_ROLE, newMinterAddress);
+
+        revokeRole(DEFAULT_ADMIN_ROLE, minterAddress);
+        minterAddress = newMinterAddress;
     }
 
     ////////////////////////////////////
@@ -659,7 +737,7 @@ contract Blueprint is
     {
         return
             super.isApprovedForAll(account, operator) ||
-            hasRole(OPERATOR_ROLE, operator);
+            hasRole(DEFAULT_ADMIN_ROLE, operator);
     }
 
     function supportsInterface(bytes4 interfaceId)

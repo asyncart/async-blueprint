@@ -46,7 +46,7 @@ describe("Prepare Blueprint", function () {
 
       Blueprint = await ethers.getContractFactory("Blueprint");
       blueprint = await Blueprint.deploy();
-      blueprint.initialize("Async Blueprint", "ABP");
+      blueprint.initialize("Async Blueprint", "ABP", ContractOwner.address);
     });
     it("1: should prepare the blueprint", async function () {
       await blueprint

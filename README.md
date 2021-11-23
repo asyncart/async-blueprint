@@ -100,6 +100,12 @@ create a secretManager.js containing the required private keys(see secretsManage
 $ yarn deploy-rinkeby
 ```
 
-Latest deployment is available at address: 0x5A22c8f3B906e98327a7F16dd122f4DE13888Ea5
-https://rinkeby.etherscan.io/address/0x5A22c8f3B906e98327a7F16dd122f4DE13888Ea5#code
+To verify the contract on rinkeby
+
+```sh
+yarn verify <implementation_address>
+
+Latest deployment is available at address: 0xbd3008b9383a5d5639f7e1c34e2eb6e6a13bd0f9
+https://rinkeby.etherscan.io/address/0xbd3008b9383a5d5639f7e1c34e2eb6e6a13bd0f9#code
 ✨
+```

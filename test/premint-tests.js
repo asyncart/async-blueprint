@@ -48,7 +48,7 @@ describe("Blueprint presale minting", function () {
 
       Blueprint = await ethers.getContractFactory("Blueprint");
       blueprint = await Blueprint.deploy();
-      blueprint.initialize("Async Blueprint", "ABP");
+      blueprint.initialize("Async Blueprint", "ABP", ContractOwner.address);
       await blueprint
         .connect(ContractOwner)
         .prepareBlueprint(

@@ -34,7 +34,6 @@ function hashToken(account, quantity) {
 
 describe("ERC20 interactions", function () {
   before(async function () {
-    console.log("A");
     this.accounts = await ethers.getSigners();
     this.merkleTree = new MerkleTree(
       Object.entries(mapping).map((mapping) => hashToken(...mapping)),
@@ -73,7 +72,7 @@ describe("ERC20 interactions", function () {
 
       await erc20.connect(user1).approve(blueprint.address, oneThousandTokens);
 
-      blueprint.initialize("Async Blueprint", "ABP");
+      blueprint.initialize("Async Blueprint", "ABP", ContractOwner.address);
       await blueprint
         .connect(ContractOwner)
         .prepareBlueprint(

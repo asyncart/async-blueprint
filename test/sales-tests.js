@@ -28,7 +28,6 @@ function hashToken(account, quantity) {
 
 describe("Blueprint Sales", function () {
   before(async function () {
-    console.log("A");
     this.accounts = await ethers.getSigners();
     this.merkleTree = new MerkleTree(
       Object.entries(mapping).map((mapping) => hashToken(...mapping)),
@@ -51,7 +50,7 @@ describe("Blueprint Sales", function () {
 
       Blueprint = await ethers.getContractFactory("Blueprint");
       blueprint = await Blueprint.deploy();
-      blueprint.initialize("Async Blueprint", "ABP");
+      blueprint.initialize("Async Blueprint", "ABP", ContractOwner.address);
       await blueprint
         .connect(ContractOwner)
         .prepareBlueprint(
@@ -220,6 +219,19 @@ describe("Blueprint Sales", function () {
         expect(newArtistBal.toString()).to.be.equal(
           BigNumber.from(artistBal).add(expectedArtistReturn).toString()
         );
+      });
+      it("6: should allow display token URI", async function () {
+        let blueprintValue = BigNumber.from(tenPieces).mul(oneEth);
+        await blueprint
+          .connect(user2)
+          .purchaseBlueprints(0, tenPieces, 0, [], { value: blueprintValue });
+
+        await blueprint
+          .connect(ContractOwner)
+          .setBaseTokenUri("https://test.baseUri");
+        let tokenUri = await blueprint.tokenURI(1);
+
+        await expect(tokenUri).to.be.equal("https://test.baseUri/1/token.json");
       });
     });
   });
