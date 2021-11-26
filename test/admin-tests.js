@@ -26,10 +26,10 @@ describe("Admin Blueprint Tests", function () {
 
     Blueprint = await ethers.getContractFactory("Blueprint");
     blueprint = await Blueprint.deploy();
-    blueprint.initialize("Async Blueprint", "ABP");
+    blueprint.initialize("Async Blueprint", "ABP", ContractOwner.address);
   });
-  it("1: should update admin role", async function () {
-    await blueprint.connect(ContractOwner).updatePlatformAddress(user2.address);
+  it("1.a: should update minter role", async function () {
+    await blueprint.connect(ContractOwner).updateMinterAddress(user2.address);
     await blueprint
       .connect(user2)
       .prepareBlueprint(
@@ -49,7 +49,15 @@ describe("Admin Blueprint Tests", function () {
     let result = await blueprint.blueprints(0);
     expect(result.artist).to.be.equal(testArtist.address);
   });
-  it("2: should allow for updating baseUri", async function () {
+
+  it("1.b: should update platform address", async function () {
+    await blueprint.connect(ContractOwner).updatePlatformAddress(user2.address);
+
+    let platformAddress = await blueprint.platform();
+
+    expect(platformAddress).to.be.equal(user2.address);
+  });
+  it("2.a: should allow for updating baseUri", async function () {
     await blueprint
       .connect(ContractOwner)
       .prepareBlueprint(
@@ -67,15 +75,67 @@ describe("Admin Blueprint Tests", function () {
       .connect(ContractOwner)
       .setFeeRecipients(0, feeRecipients, feeBps, [], []);
     let updatedUri = "http://updatedUri/";
-    await blueprint.connect(ContractOwner).updateBaseTokenUri(0, updatedUri);
+    await blueprint
+      .connect(ContractOwner)
+      .updateBlueprintTokenUri(0, updatedUri);
     let result = await blueprint.blueprints(0);
     await expect(result.baseTokenUri).to.be.equal(updatedUri);
   });
-  it("2: should not allow for updating baseUri for unprepared blueprint", async function () {
+  it("2.b: should not allow for updating baseUri for unprepared blueprint", async function () {
     let updatedUri = "http://updatedUri/";
     await expect(
-      blueprint.connect(ContractOwner).updateBaseTokenUri(0, updatedUri)
+      blueprint.connect(ContractOwner).updateBlueprintTokenUri(0, updatedUri)
     ).to.be.revertedWith("blueprint not prepared");
+  });
+  it("2.c: should lock token URI", async function () {
+    await blueprint
+      .connect(ContractOwner)
+      .prepareBlueprint(
+        testArtist.address,
+        tenThousandPieces,
+        oneEth,
+        zeroAddress,
+        testHash,
+        testUri,
+        "0x0000000000000000000000000000000000000000000000000000000000000000",
+        0,
+        0
+      );
+    await blueprint
+      .connect(ContractOwner)
+      .setFeeRecipients(0, feeRecipients, feeBps, [], []);
+    let updatedUri = "http://updatedUri/";
+
+    await blueprint.connect(ContractOwner).lockBlueprintTokenUri(0);
+    await expect(
+      blueprint.connect(ContractOwner).updateBlueprintTokenUri(0, updatedUri)
+    ).to.be.revertedWith("blueprint URI locked");
+  });
+  it("2.d: should allow platform to update base token uri", async function () {
+    await blueprint
+      .connect(ContractOwner)
+      .prepareBlueprint(
+        testArtist.address,
+        tenThousandPieces,
+        oneEth,
+        zeroAddress,
+        testHash,
+        testUri,
+        "0x0000000000000000000000000000000000000000000000000000000000000000",
+        0,
+        0
+      );
+    await blueprint
+      .connect(ContractOwner)
+      .setFeeRecipients(0, feeRecipients, feeBps, [], []);
+
+    await blueprint
+      .connect(ContractOwner)
+      .setBaseTokenUri("https://test.baseUri");
+
+    let contractBaseUri = await blueprint.baseTokenUri();
+
+    expect(contractBaseUri).to.be.equal("https://test.baseUri");
   });
   it("3: should reveal blueprint seed", async function () {
     await blueprint
@@ -104,7 +164,7 @@ describe("Admin Blueprint Tests", function () {
   it("6: should allow owner to change default Platform Fee Percentage", async function () {
     await blueprint
       .connect(ContractOwner)
-      .changedefaultPlatformPrimaryFeePercentage(6000);
+      .changeDefaultPlatformPrimaryFeePercentage(6000);
     let result = await blueprint.defaultPlatformPrimaryFeePercentage();
     expect(result.toString()).to.be.equal(BigNumber.from(6000).toString());
   });
@@ -112,13 +172,13 @@ describe("Admin Blueprint Tests", function () {
     await expect(
       blueprint
         .connect(ContractOwner)
-        .changedefaultPlatformPrimaryFeePercentage(10600)
+        .changeDefaultPlatformPrimaryFeePercentage(10600)
     ).to.be.revertedWith("");
   });
   it("8: should allow owner to change default  Secondary Fee Percentage", async function () {
     await blueprint
       .connect(ContractOwner)
-      .changedefaultBlueprintSecondarySalePercentage(3000);
+      .changeDefaultBlueprintSecondarySalePercentage(3000);
     let result = await blueprint.defaultBlueprintSecondarySalePercentage();
     expect(result.toString()).to.be.equal(BigNumber.from(3000).toString());
   });
@@ -126,7 +186,7 @@ describe("Admin Blueprint Tests", function () {
     await expect(
       blueprint
         .connect(ContractOwner)
-        .changedefaultBlueprintSecondarySalePercentage(10600)
+        .changeDefaultBlueprintSecondarySalePercentage(10600)
     ).to.be.revertedWith("");
   });
   it("10: should allow owner to change default Platform Secondary Fee Percentage", async function () {
