@@ -46,6 +46,7 @@ contract Blueprint is
         uint64 capacity;
         uint128 price;
         uint64 erc721TokenIndex;
+        uint64 maxPurchaseAmount;
         address artist;
         SaleState saleState;
         bool tokenUriLocked;
@@ -238,7 +239,8 @@ contract Blueprint is
         string memory _baseTokenUri,
         bytes32 _merkleroot,
         uint32 _mintAmountArtist,
-        uint32 _mintAmountPlatform
+        uint32 _mintAmountPlatform,
+        uint32 _maxPurchaseAmount
     ) internal {
         setErc20Token(_blueprintID, _erc20Token);
 
@@ -250,6 +252,10 @@ contract Blueprint is
 
         blueprints[_blueprintID].mintAmountArtist = _mintAmountArtist;
         blueprints[_blueprintID].mintAmountPlatform = _mintAmountPlatform;
+
+        if (_maxPurchaseAmount != 0) {
+            blueprints[_blueprintID].maxPurchaseAmount = _maxPurchaseAmount;
+        }
     }
 
     function prepareBlueprint(
@@ -261,7 +267,8 @@ contract Blueprint is
         string memory _baseTokenUri,
         bytes32 _merkleroot,
         uint32 _mintAmountArtist,
-        uint32 _mintAmountPlatform
+        uint32 _mintAmountPlatform,
+        uint32 _maxPurchaseAmount
     ) external onlyRole(MINTER_ROLE) {
         uint256 _blueprintID = blueprintIndex;
         blueprints[_blueprintID].artist = _artist;
@@ -274,7 +281,8 @@ contract Blueprint is
             _baseTokenUri,
             _merkleroot,
             _mintAmountArtist,
-            _mintAmountPlatform
+            _mintAmountPlatform,
+            _maxPurchaseAmount
         );
         setBlueprintPrepared(_blueprintID, _blueprintMetaData);
     }
@@ -341,6 +349,12 @@ contract Blueprint is
         BuyerWhitelistedOrSaleStarted(blueprintID, quantity, proof)
         isQuantityAvailableForPurchase(blueprintID, quantity)
     {
+        require(
+            blueprints[blueprintID].maxPurchaseAmount == 0 ||
+                quantity <= blueprints[blueprintID].maxPurchaseAmount,
+            "user cannot buy more than maxPurchaseAmount in single tx"
+        );
+
         address _artist = blueprints[blueprintID].artist;
         _confirmPaymentAmountAndSettleSale(
             blueprintID,
