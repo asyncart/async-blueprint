@@ -597,7 +597,7 @@ contract Blueprint is
     {
         grantRole(MINTER_ROLE, newMinterAddress);
 
-        revokeRole(DEFAULT_ADMIN_ROLE, minterAddress);
+        revokeRole(MINTER_ROLE, minterAddress);
         minterAddress = newMinterAddress;
     }
 
