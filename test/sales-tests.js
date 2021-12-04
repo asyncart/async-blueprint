@@ -62,6 +62,7 @@ describe("Blueprint Sales", function () {
           testUri,
           this.merkleTree.getHexRoot(),
           0,
+          0,
           0
         );
       await blueprint
@@ -107,6 +108,7 @@ describe("Blueprint Sales", function () {
           testHash + "dsfdk",
           testUri + "unpause_test",
           this.merkleTree.getHexRoot(),
+          0,
           0,
           0
         );
@@ -198,6 +200,7 @@ describe("Blueprint Sales", function () {
             testHash + "dsfdk",
             testUri + "_test",
             this.merkleTree.getHexRoot(),
+            0,
             0,
             0
           );

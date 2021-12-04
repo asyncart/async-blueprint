@@ -41,6 +41,7 @@ describe("Admin Blueprint Tests", function () {
         testUri,
         "0x0000000000000000000000000000000000000000000000000000000000000000",
         0,
+        0,
         0
       );
     await blueprint
@@ -68,6 +69,7 @@ describe("Admin Blueprint Tests", function () {
         testHash,
         testUri,
         "0x0000000000000000000000000000000000000000000000000000000000000000",
+        0,
         0,
         0
       );
@@ -99,6 +101,7 @@ describe("Admin Blueprint Tests", function () {
         testUri,
         "0x0000000000000000000000000000000000000000000000000000000000000000",
         0,
+        0,
         0
       );
     await blueprint
@@ -122,6 +125,7 @@ describe("Admin Blueprint Tests", function () {
         testHash,
         testUri,
         "0x0000000000000000000000000000000000000000000000000000000000000000",
+        0,
         0,
         0
       );
@@ -148,6 +152,7 @@ describe("Admin Blueprint Tests", function () {
         testHash,
         testUri,
         "0x0000000000000000000000000000000000000000000000000000000000000000",
+        0,
         0,
         0
       );

@@ -60,6 +60,7 @@ describe("Prepare Blueprint", function () {
           testUri,
           this.merkleTree.getHexRoot(),
           0,
+          0,
           0
         );
       await blueprint
@@ -90,6 +91,7 @@ describe("Prepare Blueprint", function () {
           testUri,
           this.merkleTree.getHexRoot(),
           0,
+          0,
           0
         );
       let result = await blueprint.blueprints(0);
@@ -107,6 +109,7 @@ describe("Prepare Blueprint", function () {
           testHash,
           testUri,
           this.merkleTree.getHexRoot(),
+          0,
           0,
           0
         );
@@ -129,6 +132,7 @@ describe("Prepare Blueprint", function () {
           testHash,
           testUri,
           this.merkleTree.getHexRoot(),
+          0,
           0,
           0
         );

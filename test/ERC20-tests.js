@@ -84,6 +84,7 @@ describe("ERC20 interactions", function () {
           testUri,
           this.merkleTree.getHexRoot(),
           0,
+          0,
           0
         );
       await blueprint
@@ -123,6 +124,7 @@ describe("ERC20 interactions", function () {
           testHash + "dsfdk",
           testUri + "unpause_test",
           this.merkleTree.getHexRoot(),
+          0,
           0,
           0
         );
