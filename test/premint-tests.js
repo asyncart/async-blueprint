@@ -13,6 +13,7 @@ const oneThousandPieces = 1000;
 const zero = BigNumber.from(0).toString();
 const testPlatformPreSaleMintQuantity = 15;
 const testArtistPreSaleMintQuantity = 17;
+const testMaxPurchaseAmount = 0;
 
 function hashToken(account, quantity) {
   return Buffer.from(
@@ -60,7 +61,8 @@ describe("Blueprint presale minting", function () {
           testUri,
           this.merkleTree.getHexRoot(),
           testArtistPreSaleMintQuantity,
-          testPlatformPreSaleMintQuantity
+          testPlatformPreSaleMintQuantity,
+          testMaxPurchaseAmount
         );
       await blueprint
         .connect(ContractOwner)
