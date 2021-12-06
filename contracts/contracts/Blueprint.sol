@@ -15,21 +15,20 @@ contract Blueprint is
 {
     using StringsUpgradeable for uint256;
 
-    uint32 public defaultPlatformPrimaryFeePercentage;
-    uint64 public latestErc721TokenIndex;
+    uint32 public defaultPlatformPrimaryFeePercentage;    
     uint32 public defaultBlueprintSecondarySalePercentage;
     uint32 public defaultPlatformSecondarySalePercentage;
+    uint64 public latestErc721TokenIndex;
+    uint256 public blueprintIndex;
 
     string public baseTokenUri;
 
     address public asyncSaleFeesRecipient;
-    mapping(uint256 => Blueprints) public blueprints;
-    mapping(address => uint256) failedTransferCredits;
-
-    uint256 public blueprintIndex;
-
     address public platform;
     address public minterAddress;
+
+    mapping(uint256 => Blueprints) public blueprints;
+    mapping(address => uint256) failedTransferCredits;
 
     bytes32 public constant OPERATOR_ROLE = keccak256("OPERATOR_ROLE");
     bytes32 public constant MINTER_ROLE = keccak256("MINTER_ROLE");
@@ -41,23 +40,23 @@ contract Blueprint is
         paused
     }
     struct Blueprints {
+        bool tokenUriLocked;
         uint32 mintAmountArtist;
         uint32 mintAmountPlatform;
         uint64 capacity;
-        uint128 price;
         uint64 erc721TokenIndex;
         uint64 maxPurchaseAmount;
+        uint128 price;          
         address artist;
-        SaleState saleState;
-        bool tokenUriLocked;
         address ERC20Token;
         string baseTokenUri;
         bytes32 merkleroot;
-        mapping(address => bool) claimedWhitelistedPieces;
-        address[] primaryFeeRecipients;
+        SaleState saleState;    
         uint32[] primaryFeeBPS;
-        address[] secondaryFeeRecipients;
         uint32[] secondaryFeeBPS;
+        address[] primaryFeeRecipients;
+        address[] secondaryFeeRecipients;
+        mapping(address => bool) claimedWhitelistedPieces;
     }
 
     event BlueprintSeed(uint256 blueprintID, string randomSeed);
