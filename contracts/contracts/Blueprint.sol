@@ -362,11 +362,11 @@ contract Blueprint is
             _artist
         );
 
-        _mintQuantity(blueprintID, quantity);
-
         if (blueprints[blueprintID].saleState == SaleState.not_started) {
             blueprints[blueprintID].claimedWhitelistedPieces[msg.sender] = true;
         }
+
+        _mintQuantity(blueprintID, quantity);
     }
 
     function preSaleMint(uint256 blueprintID, uint32 quantity) external {
