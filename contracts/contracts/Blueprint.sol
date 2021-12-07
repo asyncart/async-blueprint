@@ -144,7 +144,7 @@ contract Blueprint is
         platform = msg.sender;
         minterAddress = minter;
 
-        defaultPlatformPrimaryFeePercentage = 500; //5%
+        defaultPlatformPrimaryFeePercentage = 2000; //20%
 
         asyncSaleFeesRecipient = msg.sender;
     }
