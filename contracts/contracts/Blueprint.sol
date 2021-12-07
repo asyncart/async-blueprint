@@ -139,7 +139,7 @@ contract Blueprint is
 
         _setupRole(DEFAULT_ADMIN_ROLE, msg.sender);
         _setupRole(OPERATOR_ROLE, msg.sender);
-        _setupRole(MINTER_ROLE, msg.sender);
+        _setupRole(MINTER_ROLE, minter);
 
         platform = msg.sender;
         minterAddress = minter;
