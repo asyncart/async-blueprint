@@ -29,7 +29,6 @@ contract Blueprint is
     mapping(address => uint256) failedTransferCredits;
     mapping(uint256 => Blueprints) public blueprints;
 
-    bytes32 public constant OPERATOR_ROLE = keccak256("OPERATOR_ROLE");
     bytes32 public constant MINTER_ROLE = keccak256("MINTER_ROLE");
 
     enum SaleState {
@@ -137,7 +136,6 @@ contract Blueprint is
         AccessControlUpgradeable.__AccessControl_init();
 
         _setupRole(DEFAULT_ADMIN_ROLE, msg.sender);
-        _setupRole(OPERATOR_ROLE, msg.sender);
         _setupRole(MINTER_ROLE, minter);
 
         platform = msg.sender;
