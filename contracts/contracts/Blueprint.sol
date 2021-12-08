@@ -491,7 +491,7 @@ contract Blueprint is
     function updateBlueprintTokenUri(
         uint256 blueprintID,
         string memory newBaseTokenUri
-    ) external onlyRole(DEFAULT_ADMIN_ROLE) isBlueprintPrepared(blueprintID) {
+    ) external onlyRole(MINTER_ROLE) isBlueprintPrepared(blueprintID) {
         require(
             !blueprints[blueprintID].tokenUriLocked,
             "blueprint URI locked"
