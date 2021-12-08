@@ -77,8 +77,9 @@ describe("Admin Blueprint Tests", function () {
       .connect(ContractOwner)
       .setFeeRecipients(0, feeRecipients, feeBps, [], []);
     let updatedUri = "http://updatedUri/";
+    await blueprint.connect(ContractOwner).updateMinterAddress(user2.address);
     await blueprint
-      .connect(ContractOwner)
+      .connect(user2)
       .updateBlueprintTokenUri(0, updatedUri);
     let result = await blueprint.blueprints(0);
     await expect(result.baseTokenUri).to.be.equal(updatedUri);
@@ -114,33 +115,33 @@ describe("Admin Blueprint Tests", function () {
       blueprint.connect(ContractOwner).updateBlueprintTokenUri(0, updatedUri)
     ).to.be.revertedWith("blueprint URI locked");
   });
-  it("2.d: should allow platform to update base token uri", async function () {
-    await blueprint
-      .connect(ContractOwner)
-      .prepareBlueprint(
-        testArtist.address,
-        tenThousandPieces,
-        oneEth,
-        zeroAddress,
-        testHash,
-        testUri,
-        "0x0000000000000000000000000000000000000000000000000000000000000000",
-        0,
-        0,
-        0
-      );
-    await blueprint
-      .connect(ContractOwner)
-      .setFeeRecipients(0, feeRecipients, feeBps, [], []);
+  // it("2.d: should allow platform to update base token uri", async function () {
+  //   await blueprint
+  //     .connect(ContractOwner)
+  //     .prepareBlueprint(
+  //       testArtist.address,
+  //       tenThousandPieces,
+  //       oneEth,
+  //       zeroAddress,
+  //       testHash,
+  //       testUri,
+  //       "0x0000000000000000000000000000000000000000000000000000000000000000",
+  //       0,
+  //       0,
+  //       0
+  //     );
+  //   await blueprint
+  //     .connect(ContractOwner)
+  //     .setFeeRecipients(0, feeRecipients, feeBps, [], []);
 
-    await blueprint
-      .connect(ContractOwner)
-      .setBaseTokenUri("https://test.baseUri");
+  //   await blueprint
+  //     .connect(ContractOwner)
+  //     .setBaseTokenUri("https://test.baseUri");
 
-    let contractBaseUri = await blueprint.baseTokenUri();
+  //   let contractBaseUri = await blueprint.baseTokenUri();
 
-    expect(contractBaseUri).to.be.equal("https://test.baseUri");
-  });
+  //   expect(contractBaseUri).to.be.equal("https://test.baseUri");
+  // });
   it("3: should reveal blueprint seed", async function () {
     await blueprint
       .connect(ContractOwner)
