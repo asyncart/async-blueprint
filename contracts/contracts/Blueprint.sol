@@ -21,16 +21,14 @@ contract Blueprint is
     uint64 public latestErc721TokenIndex;
     uint256 public blueprintIndex;
 
-    string public baseTokenUri;
-
     address public asyncSaleFeesRecipient;
     address public platform;
     address public minterAddress;
-
-    mapping(uint256 => Blueprints) public blueprints;
+    
+    mapping(uint256 => uint256) tokenToBlueprintID;
     mapping(address => uint256) failedTransferCredits;
+    mapping(uint256 => Blueprints) public blueprints;
 
-    bytes32 public constant OPERATOR_ROLE = keccak256("OPERATOR_ROLE");
     bytes32 public constant MINTER_ROLE = keccak256("MINTER_ROLE");
 
     enum SaleState {
@@ -138,7 +136,6 @@ contract Blueprint is
         AccessControlUpgradeable.__AccessControl_init();
 
         _setupRole(DEFAULT_ADMIN_ROLE, msg.sender);
-        _setupRole(OPERATOR_ROLE, msg.sender);
         _setupRole(MINTER_ROLE, minter);
 
         platform = msg.sender;
@@ -404,6 +401,8 @@ contract Blueprint is
         uint64 newCap = blueprints[_blueprintID].capacity;
         for (uint16 i = 0; i < _quantity; i++) {
             _mint(msg.sender, newTokenId + i);
+            tokenToBlueprintID[newTokenId + i] = _blueprintID;
+
             bytes32 prefixHash = keccak256(
                 abi.encodePacked(
                     block.number,
@@ -490,7 +489,7 @@ contract Blueprint is
     function updateBlueprintTokenUri(
         uint256 blueprintID,
         string memory newBaseTokenUri
-    ) external onlyRole(DEFAULT_ADMIN_ROLE) isBlueprintPrepared(blueprintID) {
+    ) external onlyRole(MINTER_ROLE) isBlueprintPrepared(blueprintID) {
         require(
             !blueprints[blueprintID].tokenUriLocked,
             "blueprint URI locked"
@@ -514,15 +513,8 @@ contract Blueprint is
         blueprints[blueprintID].tokenUriLocked = true;
     }
 
-    function setBaseTokenUri(string memory _baseTokenUri)
-        external
-        onlyRole(DEFAULT_ADMIN_ROLE)
-    {
-        baseTokenUri = _baseTokenUri;
-    }
-
-    function _baseURI() internal view virtual override returns (string memory) {
-        return baseTokenUri;
+    function _baseURIForBlueprint(uint256 tokenId) internal view returns (string memory) {
+        return blueprints[tokenToBlueprintID[tokenId]].baseTokenUri;
     }
 
     function tokenURI(uint256 tokenId)
@@ -537,7 +529,7 @@ contract Blueprint is
             "ERC721Metadata: URI query for nonexistent token"
         );
 
-        string memory baseURI = _baseURI();
+        string memory baseURI = _baseURIForBlueprint(tokenId);
         return
             bytes(baseURI).length > 0
                 ? string(

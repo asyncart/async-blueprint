@@ -215,9 +215,9 @@ describe("Blueprint Sales", function () {
         let expectedAmount = BigNumber.from(testPlatformBal);
         let newPlatformBal = await testPlatform.getBalance();
         expect(newPlatformBal.toString()).to.be.equal(
-          expectedAmount.add(oneEth.div(2)).toString()
+          expectedAmount.add(oneEth.mul(2)).toString()
         );
-        let expectedArtistReturn = oneEth.mul(19).div(2);
+        let expectedArtistReturn = oneEth.mul(8);
         let newArtistBal = await testArtist.getBalance();
         expect(newArtistBal.toString()).to.be.equal(
           BigNumber.from(artistBal).add(expectedArtistReturn).toString()
@@ -231,7 +231,7 @@ describe("Blueprint Sales", function () {
 
         await blueprint
           .connect(ContractOwner)
-          .setBaseTokenUri("https://test.baseUri");
+          .updateBlueprintTokenUri(0, "https://test.baseUri");
         let tokenUri = await blueprint.tokenURI(1);
 
         await expect(tokenUri).to.be.equal("https://test.baseUri/1/token.json");
