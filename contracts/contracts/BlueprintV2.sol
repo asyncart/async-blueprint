@@ -8,7 +8,7 @@ import "@openzeppelin/contracts-upgradeable/access/AccessControlEnumerableUpgrad
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "@openzeppelin/contracts/utils/cryptography/MerkleProof.sol";
 
-contract Blueprint is
+contract BlueprintV2 is
     ERC721Upgradeable,
     HasSecondarySaleFees,
     AccessControlEnumerableUpgradeable
@@ -350,6 +350,8 @@ contract Blueprint is
                 quantity <= blueprints[blueprintID].maxPurchaseAmount,
             "user cannot buy more than maxPurchaseAmount in single tx"
         );
+
+        require (tx.origin == msg.sender, "purchase cannot be called from another contract");
 
         address _artist = blueprints[blueprintID].artist;
         _confirmPaymentAmountAndSettleSale(
