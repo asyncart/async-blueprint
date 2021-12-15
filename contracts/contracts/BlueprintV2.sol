@@ -283,6 +283,17 @@ contract BlueprintV2 is
         setBlueprintPrepared(_blueprintID, _blueprintMetaData);
     }
 
+    function updateWhitelistForBlueprint(
+        uint256 _blueprintID,        
+        uint32 _mintAmountArtist,
+        uint32 _mintAmountPlatform,
+        bytes32 _merkleroot
+    ) external onlyRole(MINTER_ROLE) {
+        blueprints[_blueprintID].merkleroot = _merkleroot;
+        blueprints[_blueprintID].mintAmountArtist = _mintAmountArtist;
+        blueprints[_blueprintID].mintAmountPlatform = _mintAmountPlatform;
+    }
+
     function setFeeRecipients(
         uint256 _blueprintID,
         address[] memory _primaryFeeRecipients,
@@ -402,6 +413,8 @@ contract BlueprintV2 is
         uint128 newTokenId = blueprints[_blueprintID].erc721TokenIndex;
         uint64 newCap = blueprints[_blueprintID].capacity;
         for (uint16 i = 0; i < _quantity; i++) {
+            require(newCap > 0, "blueprint out of capacity");
+            
             _mint(msg.sender, newTokenId + i);
             tokenToBlueprintID[newTokenId + i] = _blueprintID;
 
