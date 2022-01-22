@@ -8,7 +8,7 @@ import "@openzeppelin/contracts-upgradeable/access/AccessControlEnumerableUpgrad
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "@openzeppelin/contracts/utils/cryptography/MerkleProof.sol";
 
-contract BlueprintV2 is
+contract BlueprintV4 is
     ERC721Upgradeable,
     HasSecondarySaleFees,
     AccessControlEnumerableUpgradeable
@@ -283,12 +283,14 @@ contract BlueprintV2 is
         setBlueprintPrepared(_blueprintID, _blueprintMetaData);
     }
 
-    function updateWhitelistForBlueprint(
-        uint256 _blueprintID,        
+    function updateBlueprintSettings (
+        uint256 _blueprintID,
+        uint128 _price,
         uint32 _mintAmountArtist,
         uint32 _mintAmountPlatform,
         bytes32 _merkleroot
     ) external onlyRole(MINTER_ROLE) {
+        blueprints[_blueprintID].price = _price;
         blueprints[_blueprintID].merkleroot = _merkleroot;
         blueprints[_blueprintID].mintAmountArtist = _mintAmountArtist;
         blueprints[_blueprintID].mintAmountPlatform = _mintAmountPlatform;
