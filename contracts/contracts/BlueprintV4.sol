@@ -351,7 +351,8 @@ contract BlueprintV4 is
         uint256 blueprintID,
         uint32 quantity,
         uint256 tokenAmount,
-        bytes32[] calldata proof
+        bytes32[] calldata proof,
+        address nftRecipient
     )
         external
         payable
@@ -378,7 +379,19 @@ contract BlueprintV4 is
             blueprints[blueprintID].claimedWhitelistedPieces[msg.sender] = true;
         }
 
-        _mintQuantity(blueprintID, quantity);
+        _mintQuantity(blueprintID, quantity, nftRecipient);
+    }
+
+    function purchaseBlueprints(
+        uint256 blueprintID,
+        uint32 quantity,
+        uint256 tokenAmount,
+        bytes32[] calldata proof
+    ) 
+        external
+        payable
+    {
+        this.purchaseBlueprints(blueprintID, quantity, tokenAmount, proof, msg.sender);
     }
 
     function preSaleMint(uint256 blueprintID, uint32 quantity) external {
@@ -405,19 +418,19 @@ contract BlueprintV4 is
             );
             blueprints[blueprintID].mintAmountArtist -= quantity;
         }
-        _mintQuantity(blueprintID, quantity);
+        _mintQuantity(blueprintID, quantity, msg.sender);
     }
 
     /*
      * Iterate and mint each blueprint for user
      */
-    function _mintQuantity(uint256 _blueprintID, uint32 _quantity) private {
+    function _mintQuantity(uint256 _blueprintID, uint32 _quantity, address _nftRecipient) private {
         uint128 newTokenId = blueprints[_blueprintID].erc721TokenIndex;
         uint64 newCap = blueprints[_blueprintID].capacity;
         for (uint16 i = 0; i < _quantity; i++) {
             require(newCap > 0, "blueprint out of capacity");
             
-            _mint(msg.sender, newTokenId + i);
+            _mint(_nftRecipient, newTokenId + i);
             tokenToBlueprintID[newTokenId + i] = _blueprintID;
 
             bytes32 prefixHash = keccak256(
@@ -431,7 +444,7 @@ contract BlueprintV4 is
             emit BlueprintMinted(
                 _blueprintID,
                 blueprints[_blueprintID].artist,
-                msg.sender,
+                _nftRecipient,
                 newTokenId + i,
                 newCap,
                 prefixHash
