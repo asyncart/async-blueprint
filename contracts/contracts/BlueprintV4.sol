@@ -347,7 +347,7 @@ contract BlueprintV4 is
         emit SaleUnpaused(blueprintID);
     }
 
-    function purchaseBlueprints(
+    function purchaseBlueprintsTo(
         uint256 blueprintID,
         uint32 quantity,
         uint256 tokenAmount,
@@ -387,11 +387,33 @@ contract BlueprintV4 is
         uint32 quantity,
         uint256 tokenAmount,
         bytes32[] calldata proof
-    ) 
+    )
         external
         payable
+        BuyerWhitelistedOrSaleStarted(blueprintID, quantity, proof)
+        isQuantityAvailableForPurchase(blueprintID, quantity)
     {
-        this.purchaseBlueprints(blueprintID, quantity, tokenAmount, proof, msg.sender);
+        require(
+            blueprints[blueprintID].maxPurchaseAmount == 0 ||
+                quantity <= blueprints[blueprintID].maxPurchaseAmount,
+            "user cannot buy more than maxPurchaseAmount in single tx"
+        );
+
+        require (tx.origin == msg.sender, "purchase cannot be called from another contract");
+
+        address _artist = blueprints[blueprintID].artist;
+        _confirmPaymentAmountAndSettleSale(
+            blueprintID,
+            quantity,
+            tokenAmount,
+            _artist
+        );
+
+        if (blueprints[blueprintID].saleState == SaleState.not_started) {
+            blueprints[blueprintID].claimedWhitelistedPieces[msg.sender] = true;
+        }
+
+        _mintQuantity(blueprintID, quantity, msg.sender);
     }
 
     function preSaleMint(uint256 blueprintID, uint32 quantity) external {
