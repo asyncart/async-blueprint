@@ -50,7 +50,7 @@ describe("Merkleroot Tests", function () {
 
       feeRecipients = [ContractOwner.address, testArtist.address];
       feeBps = [1000, 9000];
-      Blueprint = await ethers.getContractFactory("Blueprint");
+      Blueprint = await ethers.getContractFactory("BlueprintV3");
       blueprint = await Blueprint.deploy();
       blueprint.initialize("Async Blueprint", "ABP", ContractOwner.address);
       await blueprint

@@ -58,7 +58,7 @@ describe("ERC20 interactions", function () {
       feeRecipients = [ContractOwner.address, testArtist.address];
       feeBps = [1000, 9000];
 
-      Blueprint = await ethers.getContractFactory("Blueprint");
+      Blueprint = await ethers.getContractFactory("BlueprintV5");
       blueprint = await Blueprint.deploy();
 
       Erc20 = await ethers.getContractFactory("ERC20MockContract");
