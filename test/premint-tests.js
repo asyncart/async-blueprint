@@ -47,7 +47,7 @@ describe("Blueprint presale minting", function () {
       feeRecipients = [ContractOwner.address, testArtist.address];
       feeBps = [1000, 9000];
 
-      Blueprint = await ethers.getContractFactory("BlueprintV6");
+      Blueprint = await ethers.getContractFactory("BlueprintV7");
       blueprint = await Blueprint.deploy();
       blueprint.initialize("Async Blueprint", "ABP", ContractOwner.address);
       await blueprint
