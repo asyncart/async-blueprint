@@ -2,10 +2,10 @@ const { network } = require("hardhat");
 
 module.exports = async ({ deployments }) => {
   const { deploy } = deployments;
-  // const { deployer, admin } = await getNamedAccounts();
+  //const { deployer, admin } = await getNamedAccounts();
   const accounts = await ethers.getSigners();
   const deployer = accounts[0].address;
-  await deploy("Blueprint", {
+  await deploy("BlueprintV11", {
     from: deployer,
     proxy: {
       execute: {
@@ -17,4 +17,4 @@ module.exports = async ({ deployments }) => {
     log: true,
   });
 };
-module.exports.tags = ["all", "contracts"];
+module.exports.tags = ["all", "contracts",];
