@@ -5,8 +5,8 @@
     "test": "hardhat test",
     "coverage": "hardhat coverage",
     "deploy": "hardhat deploy",
-    "deploy-rinkeby": "hardhat deploy --network rinkeby",
-    "verify": "npx hardhat verify --network rinkeby"
+    "deploy-mumbai": "hardhat deploy --network mumbai",
+    "verify": "npx hardhat verify --network mumbai"
   },
   "dependencies": {
     "@nomiclabs/hardhat-ethers": "^2.0.2",

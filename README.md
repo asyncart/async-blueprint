@@ -93,20 +93,46 @@ To run coverage:
 $ yarn coverage
 ```
 
-To deploy to Rinkeby:
-create a secretManager.js containing the required private keys(see secretsManager.example.js) then run:
+To deploy to Mumbai:
+Add required keys to .env  DO NOT CLONE .ENV files to github!
+
+The file should contain:
+POLYGON_PRIVATE_KEY = ""
+RINKEBY_PRIVATE_KEY = ""
+ALCHEMY_URL = ""
+ETHERSCAN_API_KEY = "" # Polygon Key.
+COINMARKET_CAP_KEY = ""
+
+
+
+
+ then run:
 
 ```sh
-$ yarn deploy-rinkeby
+$ yarn deploy-mumbai
+
+or
+
+$ npx hardhat run ./contracts/deploy/01_DeployContractsWithProx.js --network mumbai
 ```
 
-To verify the contract on rinkeby
+To verify the contract on mumbai
 
 ```sh
-yarn verify <implementation_address>
+$ yarn verify <implementation_address>
+
+or
+$ npx hardhat verify --network mumbai 0x.....
 ```
 
-Latest deployment is available at address: 0xbd3008b9383a5d5639f7e1c34e2eb6e6a13bd0f9
+
+To upgrade contract:
+In upgradContract.js update contractAddress
+
+Then run:
+$ npx hardhat run ./contracts/deploy/upgradContract.js --network mumbai
+
+Latest RINKEBY deployment is available at address: 0xbd3008b9383a5d5639f7e1c34e2eb6e6a13bd0f9
 https://rinkeby.etherscan.io/address/0xbd3008b9383a5d5639f7e1c34e2eb6e6a13bd0f9#code
 ✨
 
