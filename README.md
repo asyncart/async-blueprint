@@ -126,11 +126,7 @@ $ npx hardhat verify --network mumbai 0x.....
 ```
 
 
-To upgrade contract:
-In upgradContract.js update contractAddress
 
-Then run:
-$ npx hardhat run ./contracts/deploy/upgradContract.js --network mumbai
 
 Latest RINKEBY deployment is available at address: 0xbd3008b9383a5d5639f7e1c34e2eb6e6a13bd0f9
 https://rinkeby.etherscan.io/address/0xbd3008b9383a5d5639f7e1c34e2eb6e6a13bd0f9#code

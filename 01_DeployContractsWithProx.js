@@ -5,7 +5,7 @@ var instanceAddress;
 async function main() {
   // Deploying
   const BlueprintV10 = await ethers.getContractFactory("BlueprintV10");
-  const instance = await upgrades.deployProxy(BlueprintV10, ["Afro auto3", "AA3", "0x0C0aB132F5a8d0988e88997cb2604F494052BDEF"]);
+  const instance = await upgrades.deployProxy(BlueprintV10, ["Collection Name", "TICKER", "0x0C0aB132F5a8d0988e88997cb2604F494052BDEF"]);
   await instance.deployed();
   instanceAddress = instance.address
   console.log("BlueprintV10 deployed to:", instance.address);
@@ -43,3 +43,10 @@ main();
 //   });
 // };
 // module.exports.tags = ["all", "contracts",];
+
+modeyle.exports = {
+  run(){
+    console.log("hi");
+    instanceAddress = instance.address;
+  }
+}

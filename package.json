@@ -6,7 +6,9 @@
     "coverage": "hardhat coverage",
     "deploy": "hardhat deploy",
     "deploy-mumbai": "hardhat deploy --network mumbai",
-    "verify": "npx hardhat verify --network mumbai"
+    "deploy-mumbai-prox": "npx hardhat run ./contracts/deploy/01_DeployContractsWithProx.js --network mumbai",
+    "verify": "npx hardhat verify --network mumbai",
+    "verify-prox": "npx hardhat verify --network mumbai"
   },
   "dependencies": {
     "@nomiclabs/hardhat-ethers": "^2.0.2",
