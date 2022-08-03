@@ -44,7 +44,7 @@ describe("Prepare Blueprint", function () {
       feeRecipients = [ContractOwner.address, testArtist.address];
       feeBps = [1000, 9000];
 
-      Blueprint = await ethers.getContractFactory("BlueprintV7");
+      Blueprint = await ethers.getContractFactory("BlueprintV12");
       blueprint = await Blueprint.deploy();
       blueprint.initialize("Async Blueprint", "ABP", ContractOwner.address);
     });
