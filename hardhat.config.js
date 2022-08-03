@@ -5,6 +5,7 @@ require("@nomiclabs/hardhat-etherscan");
 require("hardhat-deploy");
 require("@nomiclabs/hardhat-ethers");
 require("@openzeppelin/hardhat-upgrades");
+require('hardhat-contract-sizer');
 
 const {
   rinkebyPrivateKey,
@@ -19,7 +20,7 @@ module.exports = {
     settings: {
       optimizer: {
         enabled: true,
-        runs: 200,
+        runs: 1,
       },
     },
   },
