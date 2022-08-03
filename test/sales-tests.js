@@ -4,14 +4,13 @@ const { MerkleTree } = require("merkletreejs");
 const keccak256 = require("keccak256");
 
 const { BigNumber } = require("ethers");
+const { ethers } = require("hardhat");
 
 const oneEth = BigNumber.from("1000000000000000000");
 const zeroAddress = "0x0000000000000000000000000000000000000000";
 const testUri = "https://randomUri/";
 const testHash = "fbejgnvnveorjgnt";
 const oneThousandPieces = 1000;
-const zero = BigNumber.from(0).toString();
-
 const tenPieces = 10;
 
 const sale_started = BigNumber.from(2).toString();
@@ -63,6 +62,7 @@ describe("Blueprint Sales", function () {
           this.merkleTree.getHexRoot(),
           0,
           0,
+          0,
           0
         );
       await blueprint
@@ -86,7 +86,7 @@ describe("Blueprint Sales", function () {
       expect(result.saleState.toString()).to.be.equal(sale_paused);
       await expect(
         blueprint.connect(ContractOwner).pauseSale(0)
-      ).to.be.revertedWith("Sale not started");
+      ).to.be.revertedWith("Sale not ongoing");
     });
     it("3: should allow for unpausing of paused sale", async function () {
       await blueprint.connect(ContractOwner).pauseSale(0);
@@ -110,11 +110,12 @@ describe("Blueprint Sales", function () {
           this.merkleTree.getHexRoot(),
           0,
           0,
+          0,
           0
         );
       await expect(
         blueprint.connect(ContractOwner).pauseSale(1)
-      ).to.be.revertedWith("Sale not started");
+      ).to.be.revertedWith("Sale not ongoing");
     });
     it("5: should allow users to purchase blueprints", async function () {
       let blueprintValue = BigNumber.from(tenPieces).mul(oneEth);
@@ -141,7 +142,7 @@ describe("Blueprint Sales", function () {
           .purchaseBlueprints(0, tenPieces, 0, [], { value: blueprintValue })
       ).to.be.revertedWith("not available to purchase");
     });
-    describe("B: Sale + purchase interactions", async function () {
+    describe("B: Sale + purchase interactions", function () {
       it("1: should distribute fees", async function () {
         let ownerBal = await ContractOwner.getBalance();
         let artistBal = await testArtist.getBalance();
@@ -202,6 +203,7 @@ describe("Blueprint Sales", function () {
             this.merkleTree.getHexRoot(),
             0,
             0,
+            0,
             0
           );
         await blueprint.connect(ContractOwner).beginSale(1);
@@ -237,5 +239,75 @@ describe("Blueprint Sales", function () {
         await expect(tokenUri).to.be.equal("https://test.baseUri/1/token.json");
       });
     });
+  });
+  describe("C: Expired timestamp sales tests", function () {
+    let Blueprint;
+    let blueprint;
+    let feeRecipients;
+    let feeBps;
+
+    beforeEach(async function () {
+      [ContractOwner, user1, user2, user3, testArtist, testPlatform] =
+        await ethers.getSigners();
+
+      feeRecipients = [ContractOwner.address, testArtist.address];
+      feeBps = [1000, 9000];
+
+      Blueprint = await ethers.getContractFactory("BlueprintV12");
+      blueprint = await Blueprint.deploy();
+      blueprint.initialize("Async Blueprint", "ABP", ContractOwner.address);
+      const latestBlock = await ethers.provider.getBlockNumber();
+      const latestBlocktimestamp = (await ethers.provider.getBlock(latestBlock)).timestamp
+      const nextBlockTimestamp = latestBlocktimestamp + 15
+      await ethers.provider.send("evm_mine", [nextBlockTimestamp]);
+      await blueprint
+        .connect(ContractOwner)
+        .prepareBlueprint(
+          testArtist.address,
+          oneThousandPieces,
+          oneEth,
+          zeroAddress,
+          testHash,
+          testUri,
+          this.merkleTree.getHexRoot(),
+          0,
+          0,
+          0,
+          BigNumber.from(nextBlockTimestamp).add(10)
+        );
+      await blueprint
+        .connect(ContractOwner)
+        .setFeeRecipients(0, feeRecipients, feeBps, [], []);
+      await blueprint.connect(ContractOwner).beginSale(0);
+    });
+    // TODO(sorend): strategy for testing these cases with ~300s inaccuracy in hardhat newtwork timestamp
+    it("1. Can't unpause a sale with an expired timestamp", async function () {
+      await blueprint.connect(ContractOwner).pauseSale(0);
+      let result = await blueprint.blueprints(0);
+      expect(result.saleState.toString()).to.be.equal(sale_paused);
+      // Simulate a time delay by setting the timestamp of the next block far in the future
+      const latestBlock = await ethers.provider.getBlockNumber();
+      const latestBlocktimestamp = (await ethers.provider.getBlock(latestBlock)).timestamp
+      const nextBlockTimestamp = latestBlocktimestamp + 1000
+      await ethers.provider.send("evm_mine", [nextBlockTimestamp]);
+      // Sale un-pausing should fail because the on-chain time has past the saleEndTimestamp
+      await expect(
+        blueprint.connect(ContractOwner).unpauseSale(0)
+      ).to.be.revertedWith("Sale ended");
+    });
+    it("2. Can't purchase blueprints from a sale with an expired timestamp", async function () {
+      // Simulate a time delay by setting the timestamp of the next block far in the future
+      const latestBlock = await ethers.provider.getBlockNumber();
+      const latestBlocktimestamp = (await ethers.provider.getBlock(latestBlock)).timestamp
+      const nextBlockTimestamp = latestBlocktimestamp + 1000
+      await ethers.provider.send("evm_mine", [nextBlockTimestamp]);
+      await expect (
+        blueprint
+          .connect(user2)
+          .purchaseBlueprints(0, tenPieces, 0, [], { value: BigNumber.from(tenPieces).mul(oneEth) })
+      ).to.be.revertedWith("not available to purchase");
+    });
+    // TODO: consider a test that shows you can't pause a sale who's end timestamp has passed...but maybe we don't want this if we want the minter to be able
+    //       to pause a sale then extend the timestamp/adjust settings and then unpause. Note tho this can be done using updateBlueprintSettings as is
   });
 });

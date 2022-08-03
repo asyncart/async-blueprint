@@ -1,4 +1,3 @@
-//TODO: implement fixes for BlueprintV12
 //SPDX-License-Identifier: Unlicense
 pragma solidity 0.8.4;
 
@@ -39,13 +38,14 @@ contract BlueprintV12 is
         paused
     }
     struct Blueprints {
-        bool tokenUriLocked;
         uint32 mintAmountArtist;
         uint32 mintAmountPlatform;
         uint64 capacity;
         uint64 erc721TokenIndex;
         uint64 maxPurchaseAmount;
-        uint128 price;          
+        uint128 saleEndTimestamp;
+        uint128 price;
+        bool tokenUriLocked;        
         address artist;
         address ERC20Token;
         string baseTokenUri;
@@ -84,6 +84,7 @@ contract BlueprintV12 is
         uint32 newMintAmountPlatform,
         uint32 newSaleState,
         uint64 newMaxPurchaseAmount,
+        uint128 saleEndTimestamp,
         bytes32 newMerkleRoot
     );
 
@@ -103,8 +104,8 @@ contract BlueprintV12 is
         _;
     }
 
-    modifier hasSaleStarted(uint256 _blueprintID) {
-        require(_hasSaleStarted(_blueprintID), "Sale not started");
+    modifier isSaleOngoing(uint256 _blueprintID) {
+        require(_isSaleOngoing(_blueprintID), "Sale not ongoing");
         _;
     }
 
@@ -114,7 +115,7 @@ contract BlueprintV12 is
         bytes32[] calldata proof
     ) {
         require(
-            _hasSaleStarted(_blueprintID) ||
+            _isSaleOngoing(_blueprintID) ||
                 (_isBlueprintPreparedAndNotStarted(_blueprintID) &&
                     userWhitelisted(_blueprintID, uint256(_quantity), proof)),
             "not available to purchase"
@@ -130,6 +131,13 @@ contract BlueprintV12 is
             blueprints[_blueprintID].capacity >= _quantity,
             "quantity exceeds capacity"
         );
+        _;
+    }
+
+    modifier isSaleEndTimestampCurrentlyValid(
+        uint128 _saleEndTimestamp
+    ) {
+        require(_isSaleEndTimestampCurrentlyValid(_saleEndTimestamp), "Sale ended");
         _;
     }
 
@@ -160,12 +168,20 @@ contract BlueprintV12 is
         asyncSaleFeesRecipient = msg.sender;
     }
 
-    function _hasSaleStarted(uint256 _blueprintID)
+    function _isSaleOngoing(uint256 _blueprintID)
         internal
         view
         returns (bool)
     {
-        return blueprints[_blueprintID].saleState == SaleState.started;
+        return blueprints[_blueprintID].saleState == SaleState.started && _isSaleEndTimestampCurrentlyValid(blueprints[_blueprintID].saleEndTimestamp);
+    }
+
+    function _isSaleEndTimestampCurrentlyValid(uint128 _saleEndTimestamp)
+        internal
+        view
+        returns (bool)
+    {
+        return _saleEndTimestamp == 0 || _saleEndTimestamp > block.timestamp;
     }
 
     function _isBlueprintPreparedAndNotStarted(uint256 _blueprintID)
@@ -250,8 +266,11 @@ contract BlueprintV12 is
         bytes32 _merkleroot,
         uint32 _mintAmountArtist,
         uint32 _mintAmountPlatform,
-        uint32 _maxPurchaseAmount
-    ) internal {
+        uint64 _maxPurchaseAmount,
+        uint128 _saleEndTimestamp
+    )   internal 
+        isSaleEndTimestampCurrentlyValid(_saleEndTimestamp)
+    {
         setErc20Token(_blueprintID, _erc20Token);
 
         blueprints[_blueprintID].baseTokenUri = _baseTokenUri;
@@ -266,6 +285,10 @@ contract BlueprintV12 is
         if (_maxPurchaseAmount != 0) {
             blueprints[_blueprintID].maxPurchaseAmount = _maxPurchaseAmount;
         }
+        
+        if (_saleEndTimestamp != 0) {
+            blueprints[_blueprintID].saleEndTimestamp = _saleEndTimestamp;
+        }
     }
 
     function prepareBlueprint(
@@ -278,8 +301,11 @@ contract BlueprintV12 is
         bytes32 _merkleroot,
         uint32 _mintAmountArtist,
         uint32 _mintAmountPlatform,
-        uint32 _maxPurchaseAmount
-    ) external onlyRole(MINTER_ROLE) {
+        uint64 _maxPurchaseAmount,
+        uint128 _saleEndTimestamp
+    )   external 
+        onlyRole(MINTER_ROLE)
+    {
         uint256 _blueprintID = blueprintIndex;
         blueprints[_blueprintID].artist = _artist;
         blueprints[_blueprintID].capacity = _capacity;
@@ -292,7 +318,8 @@ contract BlueprintV12 is
             _merkleroot,
             _mintAmountArtist,
             _mintAmountPlatform,
-            _maxPurchaseAmount
+            _maxPurchaseAmount,
+            _saleEndTimestamp
         );
         setBlueprintPrepared(_blueprintID, _blueprintMetaData);
     }
@@ -330,16 +357,22 @@ contract BlueprintV12 is
         uint32 _mintAmountPlatform,
         uint32 _newSaleState,
         uint64 _newMaxPurchaseAmount,
+        uint128 _saleEndTimestamp,
         bytes32 _merkleroot
-    ) external onlyRole(MINTER_ROLE) {
+    )   external 
+        onlyRole(MINTER_ROLE) 
+        isSaleEndTimestampCurrentlyValid(_saleEndTimestamp)
+    {
         blueprints[_blueprintID].price = _price;
         blueprints[_blueprintID].mintAmountArtist = _mintAmountArtist;
         blueprints[_blueprintID].mintAmountPlatform = _mintAmountPlatform;
+        // Do we want to validate that this is an accurate transition? i.e. not_started -> paused would be invalid, or enforce the modifiers on pause/unpause sale etc.
         blueprints[_blueprintID].saleState = SaleState (_newSaleState);
         blueprints[_blueprintID].merkleroot = _merkleroot; 
         blueprints[_blueprintID].maxPurchaseAmount = _newMaxPurchaseAmount;
+        blueprints[_blueprintID].saleEndTimestamp = _saleEndTimestamp;
 
-        emit BlueprintSettingsUpdated(_blueprintID, _price, _mintAmountArtist, _mintAmountPlatform, _newSaleState, _newMaxPurchaseAmount, _merkleroot);
+        emit BlueprintSettingsUpdated(_blueprintID, _price, _mintAmountArtist, _mintAmountPlatform, _newSaleState, _newMaxPurchaseAmount, _saleEndTimestamp, _merkleroot);
     }
 
     function setFeeRecipients(
@@ -366,7 +399,11 @@ contract BlueprintV12 is
         }
     }
 
-    function beginSale(uint256 blueprintID) external onlyRole(MINTER_ROLE) {
+    function beginSale(uint256 blueprintID)
+        external
+        onlyRole(MINTER_ROLE)
+        isSaleEndTimestampCurrentlyValid(blueprints[blueprintID].saleEndTimestamp) 
+    {
         require(
             blueprints[blueprintID].saleState == SaleState.not_started,
             "sale started or not prepared"
@@ -378,13 +415,13 @@ contract BlueprintV12 is
     function pauseSale(uint256 blueprintID)
         external
         onlyRole(MINTER_ROLE)
-        hasSaleStarted(blueprintID)
+        isSaleOngoing(blueprintID)
     {
         blueprints[blueprintID].saleState = SaleState.paused;
         emit SalePaused(blueprintID);
     }
 
-    function unpauseSale(uint256 blueprintID) external onlyRole(MINTER_ROLE) {
+    function unpauseSale(uint256 blueprintID) external onlyRole(MINTER_ROLE) isSaleEndTimestampCurrentlyValid(blueprints[blueprintID].saleEndTimestamp) {
         require(
             blueprints[blueprintID].saleState == SaleState.paused,
             "Sale not paused"

@@ -23,7 +23,6 @@ function hashToken(account, quantity) {
 
 describe("Prepare Blueprint", function () {
   before(async function () {
-    console.log("A");
     this.accounts = await ethers.getSigners();
     this.merkleTree = new MerkleTree(
       Object.entries(mapping).map((mapping) => hashToken(...mapping)),
@@ -61,7 +60,8 @@ describe("Prepare Blueprint", function () {
           this.merkleTree.getHexRoot(),
           0,
           0,
-          0
+          0,
+          BigNumber.from(0)
         );
       await blueprint
         .connect(ContractOwner)
@@ -78,8 +78,29 @@ describe("Prepare Blueprint", function () {
       );
       expect(result.erc721TokenIndex.toString()).to.be.equal(zero);
       expect(result.baseTokenUri).to.be.equal(testUri);
+      expect(result.saleEndTimestamp.toString()).to.be.equal(zero);
     });
-    it("2: should allow user to not specify fees", async function () {
+    it("should not allow timestamp to be a value in the past", async function () {
+      await expect(
+        blueprint
+          .connect(ContractOwner)
+          .prepareBlueprint(
+            testArtist.address,
+            tenThousandPieces,
+            oneEth,
+            zeroAddress,
+            testHash,
+            testUri,
+            this.merkleTree.getHexRoot(),
+            0,
+            0,
+            0,
+            BigNumber.from(1)
+          )
+      ).to.be.revertedWith("Sale ended");
+    });
+    it("should allow timestamp to be a value in the future", async function () {
+      const saleEndTimestamp = BigNumber.from(Date.now()).div(1000).add(100000);
       await blueprint
         .connect(ContractOwner)
         .prepareBlueprint(
@@ -92,12 +113,32 @@ describe("Prepare Blueprint", function () {
           this.merkleTree.getHexRoot(),
           0,
           0,
-          0
+          0,
+          BigNumber.from(saleEndTimestamp)
+        )
+      let result = await blueprint.blueprints(0);
+      expect(result.saleEndTimestamp.toString()).to.be.equal(saleEndTimestamp.toString());
+    });
+    it("should allow user to not specify fees", async function () {
+      await blueprint
+        .connect(ContractOwner)
+        .prepareBlueprint(
+          testArtist.address,
+          tenThousandPieces,
+          oneEth,
+          zeroAddress,
+          testHash,
+          testUri,
+          this.merkleTree.getHexRoot(),
+          0,
+          0,
+          0,
+          BigNumber.from(0)
         );
       let result = await blueprint.blueprints(0);
       await expect(result.artist).to.be.equal(testArtist.address);
     });
-    it("3: should not allow mismatched fee recipients", async function () {
+    it("should not allow mismatched fee recipients", async function () {
       let misFeeRecips = [testArtist.address];
       await blueprint
         .connect(ContractOwner)
@@ -111,7 +152,8 @@ describe("Prepare Blueprint", function () {
           this.merkleTree.getHexRoot(),
           0,
           0,
-          0
+          0,
+          BigNumber.from(0)
         );
 
       await expect(
@@ -120,7 +162,7 @@ describe("Prepare Blueprint", function () {
           .setFeeRecipients(0, misFeeRecips, feeBps, [], [])
       ).to.be.revertedWith("mismatched recipients & Bps");
     });
-    it("4: should not allow fee bps to exceed 10000", async function () {
+    it("should not allow fee bps to exceed 10000", async function () {
       let mismatchBps = [5000, 6000];
       await blueprint
         .connect(ContractOwner)
@@ -134,7 +176,8 @@ describe("Prepare Blueprint", function () {
           this.merkleTree.getHexRoot(),
           0,
           0,
-          0
+          0,
+          BigNumber.from(0)
         );
       await expect(
         blueprint
@@ -142,7 +185,7 @@ describe("Prepare Blueprint", function () {
           .setFeeRecipients(0, feeRecipients, mismatchBps, [], [])
       ).to.be.revertedWith("Fee Bps exceed maximum");
     });
-    it("5: should not allow sale for unprepared blueprint", async function () {
+    it("should not allow sale for unprepared blueprint", async function () {
       await expect(
         blueprint.connect(ContractOwner).beginSale(0)
       ).to.be.revertedWith("sale started or not prepared");

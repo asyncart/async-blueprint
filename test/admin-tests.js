@@ -42,6 +42,7 @@ describe("Admin Blueprint Tests", function () {
         "0x0000000000000000000000000000000000000000000000000000000000000000",
         0,
         0,
+        0,
         0
       );
     await blueprint
@@ -69,6 +70,7 @@ describe("Admin Blueprint Tests", function () {
         testHash,
         testUri,
         "0x0000000000000000000000000000000000000000000000000000000000000000",
+        0,
         0,
         0,
         0
@@ -101,6 +103,7 @@ describe("Admin Blueprint Tests", function () {
         testHash,
         testUri,
         "0x0000000000000000000000000000000000000000000000000000000000000000",
+        0,
         0,
         0,
         0
@@ -153,6 +156,7 @@ describe("Admin Blueprint Tests", function () {
         testHash,
         testUri,
         "0x0000000000000000000000000000000000000000000000000000000000000000",
+        0,
         0,
         0,
         0
@@ -208,5 +212,84 @@ describe("Admin Blueprint Tests", function () {
         .connect(ContractOwner)
         .changeDefaultPlatformSecondarySalePercentage(10600)
     ).to.be.revertedWith("");
+  });
+  it("12: should allow owner to change Blueprint settings to valid values", async function () {
+    await blueprint
+      .connect(ContractOwner)
+      .prepareBlueprint(
+        testArtist.address,
+        tenThousandPieces,
+        oneEth,
+        zeroAddress,
+        testHash,
+        testUri,
+        "0x0000000000000000000000000000000000000000000000000000000000000000",
+        0,
+        0,
+        0,
+        0
+      );
+    const newPrice = oneEth.mul(2);
+    const newMintAmountArtist = 1;
+    const newMintAmountPlatform = 3;
+    const newSaleState = 1;
+    const newMaxPurchaseAmount = BigNumber.from(10);
+    const newSaleEndTimestampInSeconds = BigNumber.from(Date.now()).div(1000).add(70000);
+    await blueprint
+      .connect(ContractOwner)
+      .updateBlueprintSettings(
+        0,
+        newPrice,
+        newMintAmountArtist,
+        newMintAmountPlatform,
+        newSaleState,
+        newMaxPurchaseAmount,
+        newSaleEndTimestampInSeconds,
+        "0x0000000000000000000000000000000000000000000000000000000000000000",
+      );
+    let result = await blueprint.blueprints(0);
+    expect(result.saleState.toString()).to.be.equal(
+      newSaleState.toString()
+    );
+    expect(result.price.toString()).to.be.equal(
+      newPrice.toString()
+    );
+    expect(result.mintAmountArtist).to.be.equal(
+      newMintAmountArtist
+    );
+    expect(result.mintAmountPlatform).to.be.equal(
+      newMintAmountPlatform
+    );
+    expect(result.maxPurchaseAmount.toString()).to.be.equal(
+      newMaxPurchaseAmount.toString()
+    );
+    expect(result.saleEndTimestamp.toString()).to.be.equal(
+      newSaleEndTimestampInSeconds.toString()
+    );
+    expect(result.merkleroot.toString()).to.be.equal(
+      "0x0000000000000000000000000000000000000000000000000000000000000000"
+    );
+  });
+  it("13: should not allow owner to update Blueprint settings with invalid timestamp", async function () {
+    const newPrice = oneEth.mul(2);
+    const newMintAmountArtist = 1;
+    const newMintAmountPlatform = 3;
+    const newSaleState = 1;
+    const newMaxPurchaseAmount = BigNumber.from(10);
+    const newSaleEndTimestampInSeconds = BigNumber.from(Date.now()).div(1000).sub(10);
+    await expect(
+      blueprint
+      .connect(ContractOwner)
+      .updateBlueprintSettings(
+        0,
+        newPrice,
+        newMintAmountArtist,
+        newMintAmountPlatform,
+        newSaleState,
+        newMaxPurchaseAmount,
+        newSaleEndTimestampInSeconds,
+        "0x0000000000000000000000000000000000000000000000000000000000000000",
+      )
+    ).to.be.revertedWith("Sale ended");
   });
 });
