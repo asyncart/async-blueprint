@@ -15,6 +15,12 @@ const tenThousandPieces = 10000;
 const oneThousandPieces = 1000;
 const zero = BigNumber.from(0).toString();
 const fiveHundredPieces = BigNumber.from(oneThousandPieces).div(2);
+const emptyFeeRecipients = {
+  primaryFeeBPS: [],
+  secondaryFeeBPS: [],
+  primaryFeeRecipients: [],
+  secondaryFeeRecipients: []
+}
 
 const tenPieces = 10;
 
@@ -48,15 +54,19 @@ describe("ERC20 interactions", function () {
     let Erc20;
     let erc20;
 
-    let feeRecipients;
-    let feeBps;
+    let feeRecipients = {
+      primaryFeeBPS: [],
+      secondaryFeeBPS: [],
+      primaryFeeRecipients: [],
+      secondaryFeeRecipients: []
+    }
 
     beforeEach(async function () {
       [ContractOwner, user1, user2, user3, testArtist, testPlatform] =
         await ethers.getSigners();
 
-      feeRecipients = [ContractOwner.address, testArtist.address];
-      feeBps = [1000, 9000];
+      feeRecipients.primaryFeeRecipients = [ContractOwner.address, testArtist.address];
+      feeRecipients.primaryFeeBPS = [1000, 9000];
 
       Blueprint = await ethers.getContractFactory("BlueprintV12");
       blueprint = await Blueprint.deploy();
@@ -86,11 +96,9 @@ describe("ERC20 interactions", function () {
           0,
           0,
           0,
-          0
+          0,
+          feeRecipients
         );
-      await blueprint
-        .connect(ContractOwner)
-        .setFeeRecipients(0, feeRecipients, feeBps, [], []);
       await blueprint.connect(ContractOwner).beginSale(0);
     });
     it("1: should begin sale of blueprint", async function () {
@@ -128,11 +136,9 @@ describe("ERC20 interactions", function () {
           0,
           0,
           0,
-          0
+          0,
+          feeRecipients
         );
-      await blueprint
-        .connect(ContractOwner)
-        .setFeeRecipients(1, feeRecipients, feeBps, feeRecipients, feeBps);
       await expect(
         blueprint.connect(ContractOwner).pauseSale(1)
       ).to.be.revertedWith("Sale not ongoing");

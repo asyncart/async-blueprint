@@ -37,6 +37,14 @@ contract BlueprintV12 is
         started,
         paused
     }
+
+    struct Fees {
+        uint32[] primaryFeeBPS;
+        uint32[] secondaryFeeBPS;
+        address[] primaryFeeRecipients;
+        address[] secondaryFeeRecipients;
+    }
+
     struct Blueprints {
         uint32 mintAmountArtist;
         uint32 mintAmountPlatform;
@@ -51,10 +59,7 @@ contract BlueprintV12 is
         string baseTokenUri;
         bytes32 merkleroot;
         SaleState saleState;    
-        uint32[] primaryFeeBPS;
-        uint32[] secondaryFeeBPS;
-        address[] primaryFeeRecipients;
-        address[] secondaryFeeRecipients;
+        Fees feeRecipientInfo;
         mapping(address => bool) claimedWhitelistedPieces;
     }
 
@@ -99,7 +104,7 @@ contract BlueprintV12 is
     modifier isBlueprintPrepared(uint256 _blueprintID) {
         require(
             blueprints[_blueprintID].saleState != SaleState.not_prepared,
-            "blueprint not prepared"
+            "not prepared"
         );
         _;
     }
@@ -192,14 +197,6 @@ contract BlueprintV12 is
         return blueprints[_blueprintID].saleState == SaleState.not_started;
     }
 
-    function _getFeePortion(uint256 _totalSaleAmount, uint256 _percentage)
-        internal
-        pure
-        returns (uint256)
-    {
-        return (_totalSaleAmount * (_percentage)) / 10000;
-    }
-
     function userWhitelisted(
         uint256 _blueprintID,
         uint256 _quantity,
@@ -214,23 +211,20 @@ contract BlueprintV12 is
         return _verify(_leaf(msg.sender, _quantity), _merkleroot, proof);
     }
 
-    function feesApplicable(
+    function feeArrayDataValid(
         address[] memory _feeRecipients,
         uint32[] memory _feeBPS
     ) internal pure returns (bool) {
-        if (_feeRecipients.length != 0 || _feeBPS.length != 0) {
-            require(
-                _feeRecipients.length == _feeBPS.length,
-                "mismatched recipients & Bps"
-            );
-            uint32 totalPercent;
-            for (uint256 i = 0; i < _feeBPS.length; i++) {
-                totalPercent = totalPercent + _feeBPS[i];
-            }
-            require(totalPercent <= 10000, "Fee Bps exceed maximum");
-            return true;
+        require(
+            _feeRecipients.length == _feeBPS.length,
+            "mismatched recipients & Bps"
+        );
+        uint32 totalPercent;
+        for (uint256 i = 0; i < _feeBPS.length; i++) {
+            totalPercent = totalPercent + _feeBPS[i];
         }
-        return false;
+        require(totalPercent <= 10000, "Fee Bps > maximum");
+        return true;
     }
 
     function setBlueprintPrepared(
@@ -240,14 +234,13 @@ contract BlueprintV12 is
         blueprints[_blueprintID].saleState = SaleState.not_started;
         //assign the erc721 token index to the blueprint
         blueprints[_blueprintID].erc721TokenIndex = latestErc721TokenIndex;
-        uint64 _capacity = blueprints[_blueprintID].capacity;
-        latestErc721TokenIndex += _capacity;
+        latestErc721TokenIndex += blueprints[_blueprintID].capacity;
         blueprintIndex++;
 
         emit BlueprintPrepared(
             _blueprintID,
             blueprints[_blueprintID].artist,
-            _capacity,
+            blueprints[_blueprintID].capacity,
             _blueprintMetaData,
             blueprints[_blueprintID].baseTokenUri
         );
@@ -302,7 +295,8 @@ contract BlueprintV12 is
         uint32 _mintAmountArtist,
         uint32 _mintAmountPlatform,
         uint64 _maxPurchaseAmount,
-        uint128 _saleEndTimestamp
+        uint128 _saleEndTimestamp,
+        Fees memory _feeRecipientInfo
     )   external 
         onlyRole(MINTER_ROLE)
     {
@@ -321,7 +315,9 @@ contract BlueprintV12 is
             _maxPurchaseAmount,
             _saleEndTimestamp
         );
+
         setBlueprintPrepared(_blueprintID, _blueprintMetaData);
+        setFeeRecipients(_blueprintID, _feeRecipientInfo);
     }
 
     function resetClaimedStatus (
@@ -343,7 +339,7 @@ contract BlueprintV12 is
         uint64 _newCapacity,
         uint64 _newLatestErc721TokenIndex
     ) external onlyRole(MINTER_ROLE) {
-        require(blueprints[_blueprintID].capacity > _newCapacity, "Not enough capacity to reduce");
+        require(blueprints[_blueprintID].capacity > _newCapacity, "New cap too large");
 
         blueprints[_blueprintID].capacity = _newCapacity;
 
@@ -377,25 +373,15 @@ contract BlueprintV12 is
 
     function setFeeRecipients(
         uint256 _blueprintID,
-        address[] memory _primaryFeeRecipients,
-        uint32[] memory _primaryFeeBPS,
-        address[] memory _secondaryFeeRecipients,
-        uint32[] memory _secondaryFeeBPS
-    ) external onlyRole(MINTER_ROLE) {
+        Fees memory _feeRecipientInfo
+    ) public onlyRole(MINTER_ROLE) {
         require(
-            blueprints[_blueprintID].saleState == SaleState.not_started,
-            "sale started or not prepared"
+            blueprints[_blueprintID].saleState != SaleState.not_prepared,
+            "never prepared"
         );
-        if (feesApplicable(_primaryFeeRecipients, _primaryFeeBPS)) {
-            blueprints[_blueprintID]
-                .primaryFeeRecipients = _primaryFeeRecipients;
-            blueprints[_blueprintID].primaryFeeBPS = _primaryFeeBPS;
-        }
-
-        if (feesApplicable(_secondaryFeeRecipients, _secondaryFeeBPS)) {
-            blueprints[_blueprintID]
-                .secondaryFeeRecipients = _secondaryFeeRecipients;
-            blueprints[_blueprintID].secondaryFeeBPS = _secondaryFeeBPS;
+        if (feeArrayDataValid(_feeRecipientInfo.primaryFeeRecipients, _feeRecipientInfo.primaryFeeBPS) && 
+                feeArrayDataValid(_feeRecipientInfo.secondaryFeeRecipients, _feeRecipientInfo.secondaryFeeBPS)) {
+            blueprints[_blueprintID].feeRecipientInfo = _feeRecipientInfo;
         }
     }
 
@@ -445,10 +431,10 @@ contract BlueprintV12 is
         require(
             blueprints[blueprintID].maxPurchaseAmount == 0 ||
                 quantity <= blueprints[blueprintID].maxPurchaseAmount,
-            "user cannot buy more than maxPurchaseAmount in single tx"
+            "cannot buy > maxPurchaseAmount in one tx"
         );
 
-        require (tx.origin == msg.sender, "purchase cannot be called from another contract");
+        require (tx.origin == msg.sender, "purchase not callable from other contract");
 
         address _artist = blueprints[blueprintID].artist;
         _confirmPaymentAmountAndSettleSale(
@@ -479,10 +465,10 @@ contract BlueprintV12 is
         require(
             blueprints[blueprintID].maxPurchaseAmount == 0 ||
                 quantity <= blueprints[blueprintID].maxPurchaseAmount,
-            "user cannot buy more than maxPurchaseAmount in single tx"
+            "cannot buy > maxPurchaseAmount in one tx"
         );
 
-        require (tx.origin == msg.sender, "purchase cannot be called from another contract");
+        require (tx.origin == msg.sender, "purchase not callable from other contract");
 
         address _artist = blueprints[blueprintID].artist;
         _confirmPaymentAmountAndSettleSale(
@@ -502,7 +488,7 @@ contract BlueprintV12 is
     function preSaleMint(uint256 blueprintID, uint32 quantity) external {
         require(
             _isBlueprintPreparedAndNotStarted(blueprintID),
-            "Must be prepared and not started"
+            "Sale must be not started"
         );
         require(
             minterAddress == msg.sender ||
@@ -533,7 +519,7 @@ contract BlueprintV12 is
         uint128 newTokenId = blueprints[_blueprintID].erc721TokenIndex;
         uint64 newCap = blueprints[_blueprintID].capacity;
         for (uint16 i = 0; i < _quantity; i++) {
-            require(newCap > 0, "blueprint out of capacity");
+            require(newCap > 0, "quantity > cap");
             
             _mint(_nftRecipient, newTokenId + i);
             tokenToBlueprintID[newTokenId + i] = _blueprintID;
@@ -627,7 +613,7 @@ contract BlueprintV12 is
     ) external onlyRole(MINTER_ROLE) isBlueprintPrepared(blueprintID) {
         require(
             !blueprints[blueprintID].tokenUriLocked,
-            "blueprint URI locked"
+            "URI locked"
         );
 
         blueprints[blueprintID].baseTokenUri = newBaseTokenUri;
@@ -642,14 +628,10 @@ contract BlueprintV12 is
     {
         require(
             !blueprints[blueprintID].tokenUriLocked,
-            "blueprint URI locked"
+            "URI locked"
         );
 
         blueprints[blueprintID].tokenUriLocked = true;
-    }
-
-    function _baseURIForBlueprint(uint256 tokenId) internal view returns (string memory) {
-        return blueprints[tokenToBlueprintID[tokenId]].baseTokenUri;
     }
 
     function tokenURI(uint256 tokenId)
@@ -664,7 +646,7 @@ contract BlueprintV12 is
             "ERC721Metadata: URI query for nonexistent token"
         );
 
-        string memory baseURI = _baseURIForBlueprint(tokenId);
+        string memory baseURI = blueprints[tokenToBlueprintID[tokenId]].baseTokenUri;
         return
             bytes(baseURI).length > 0
                 ? string(
@@ -758,7 +740,7 @@ contract BlueprintV12 is
         uint256 feesPaid;
 
         for (uint256 i = 0; i < _primaryFeeRecipients.length; i++) {
-            uint256 fee = _getFeePortion(_amount, _primaryFeeBPS[i]);
+            uint256 fee = (_amount * _primaryFeeBPS[i])/10000;
             feesPaid = feesPaid + fee;
             _payout(_primaryFeeRecipients[i], _erc20Token, fee);
         }
@@ -807,12 +789,12 @@ contract BlueprintV12 is
         view
         returns (address[] memory)
     {
-        if (blueprints[id].primaryFeeRecipients.length == 0) {
+        if (blueprints[id].feeRecipientInfo.primaryFeeRecipients.length == 0) {
             address[] memory primaryFeeRecipients = new address[](1);
             primaryFeeRecipients[0] = (asyncSaleFeesRecipient);
             return primaryFeeRecipients;
         } else {
-            return blueprints[id].primaryFeeRecipients;
+            return blueprints[id].feeRecipientInfo.primaryFeeRecipients;
         }
     }
 
@@ -821,13 +803,13 @@ contract BlueprintV12 is
         view
         returns (uint32[] memory)
     {
-        if (blueprints[id].primaryFeeBPS.length == 0) {
+        if (blueprints[id].feeRecipientInfo.primaryFeeBPS.length == 0) {
             uint32[] memory primaryFeeBPS = new uint32[](1);
             primaryFeeBPS[0] = defaultPlatformPrimaryFeePercentage;
 
             return primaryFeeBPS;
         } else {
-            return blueprints[id].primaryFeeBPS;
+            return blueprints[id].feeRecipientInfo.primaryFeeBPS;
         }
     }
 
@@ -837,14 +819,14 @@ contract BlueprintV12 is
         override
         returns (address[] memory)
     {
-        if (blueprints[tokenToBlueprintID[tokenId]].secondaryFeeRecipients.length == 0) {
+        if (blueprints[tokenToBlueprintID[tokenId]].feeRecipientInfo.secondaryFeeRecipients.length == 0) {
             address[] memory feeRecipients = new address[](2);
             feeRecipients[0] = (asyncSaleFeesRecipient);
             feeRecipients[1] = (blueprints[tokenToBlueprintID[tokenId]].artist);
 
             return feeRecipients;
         } else {
-            return blueprints[tokenToBlueprintID[tokenId]].secondaryFeeRecipients;
+            return blueprints[tokenToBlueprintID[tokenId]].feeRecipientInfo.secondaryFeeRecipients;
         }
     }
 
@@ -854,14 +836,14 @@ contract BlueprintV12 is
         override
         returns (uint32[] memory)
     {
-        if (blueprints[tokenToBlueprintID[tokenId]].secondaryFeeBPS.length == 0) {
+        if (blueprints[tokenToBlueprintID[tokenId]].feeRecipientInfo.secondaryFeeBPS.length == 0) {
             uint32[] memory feeBPS = new uint32[](2);
             feeBPS[0] = defaultPlatformSecondarySalePercentage;
             feeBPS[1] = defaultBlueprintSecondarySalePercentage;
 
             return feeBPS;
         } else {
-            return blueprints[tokenToBlueprintID[tokenId]].secondaryFeeBPS;
+            return blueprints[tokenToBlueprintID[tokenId]].feeRecipientInfo.secondaryFeeBPS;
         }
     }
 
