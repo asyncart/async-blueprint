@@ -234,13 +234,14 @@ contract BlueprintV12 is
         blueprints[_blueprintID].saleState = SaleState.not_started;
         //assign the erc721 token index to the blueprint
         blueprints[_blueprintID].erc721TokenIndex = latestErc721TokenIndex;
-        latestErc721TokenIndex += blueprints[_blueprintID].capacity;
+        uint64 _capacity = blueprints[_blueprintID].capacity;
+        latestErc721TokenIndex += _capacity;
         blueprintIndex++;
 
         emit BlueprintPrepared(
             _blueprintID,
             blueprints[_blueprintID].artist,
-            blueprints[_blueprintID].capacity,
+            _capacity,
             _blueprintMetaData,
             blueprints[_blueprintID].baseTokenUri
         );
