@@ -62,7 +62,8 @@ describe("Blueprint presale minting", function () {
           this.merkleTree.getHexRoot(),
           testArtistPreSaleMintQuantity,
           testPlatformPreSaleMintQuantity,
-          testMaxPurchaseAmount
+          testMaxPurchaseAmount,
+          0
         );
       await blueprint
         .connect(ContractOwner)

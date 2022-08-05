@@ -65,6 +65,7 @@ describe("Merkleroot Tests", function () {
           this.merkleTree.getHexRoot(),
           0,
           0,
+          0,
           0
         );
       await blueprint
@@ -123,6 +124,7 @@ describe("Merkleroot Tests", function () {
           testHash,
           testUri,
           "0x0000000000000000000000000000000000000000000000000000000000000000",
+          0,
           0,
           0,
           0

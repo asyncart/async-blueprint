@@ -85,6 +85,7 @@ describe("ERC20 interactions", function () {
           this.merkleTree.getHexRoot(),
           0,
           0,
+          0,
           0
         );
       await blueprint
@@ -126,6 +127,7 @@ describe("ERC20 interactions", function () {
           this.merkleTree.getHexRoot(),
           0,
           0,
+          0,
           0
         );
       await blueprint
@@ -133,7 +135,7 @@ describe("ERC20 interactions", function () {
         .setFeeRecipients(1, feeRecipients, feeBps, feeRecipients, feeBps);
       await expect(
         blueprint.connect(ContractOwner).pauseSale(1)
-      ).to.be.revertedWith("Sale not started");
+      ).to.be.revertedWith("Sale not ongoing");
     });
     it("5: should allow users to purchase blueprints", async function () {
       await blueprint
