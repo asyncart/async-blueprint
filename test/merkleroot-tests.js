@@ -36,7 +36,6 @@ function hashToken(account, quantity) {
 
 describe("Merkleroot Tests", function () {
   before(async function () {
-    console.log("A");
     this.accounts = await ethers.getSigners();
     this.merkleTree = new MerkleTree(
       Object.entries(mapping).map((mapping) => hashToken(...mapping)),

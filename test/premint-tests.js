@@ -32,7 +32,6 @@ function hashToken(account, quantity) {
 
 describe("Blueprint presale minting", function () {
   before(async function () {
-    console.log("A");
     this.accounts = await ethers.getSigners();
     this.merkleTree = new MerkleTree(
       Object.entries(mapping).map((mapping) => hashToken(...mapping)),
@@ -130,13 +129,23 @@ describe("Blueprint presale minting", function () {
         blueprint.connect(user1).preSaleMint(0, testArtistPreSaleMintQuantity)
       ).to.be.revertedWith("user cannot mint presale");
     });
-    it("6: Should not allow presale mint once sale started", async function () {
+    it("6: Should allow presale mint once sale started", async function () {
       await blueprint.connect(ContractOwner).beginSale(0);
-      await expect(
-        blueprint
+      await blueprint
           .connect(testArtist)
-          .preSaleMint(0, testArtistPreSaleMintQuantity)
-      ).to.be.revertedWith("Sale must be not started");
+          .preSaleMint(0, testArtistPreSaleMintQuantity);
+      let result = await blueprint.blueprints(0);
+      let expectedCap = oneThousandPieces - testArtistPreSaleMintQuantity;
+      expect(result.capacity.toString()).to.be.equal(
+        BigNumber.from(expectedCap).toString()
+      );
+      //should end on the next index
+      //this user owns 0 - 9, next user will own 10 - x
+      expect(result.erc721TokenIndex.toString()).to.be.equal(
+        BigNumber.from(testArtistPreSaleMintQuantity).toString()
+      );
+      let platformBalance = await blueprint.balanceOf(testArtist.address);
+      expect(platformBalance).to.be.equal(testArtistPreSaleMintQuantity);
     });
     it("7: Should not allow presale mint when sale paused", async function () {
       await blueprint.connect(ContractOwner).beginSale(0);
@@ -145,7 +154,7 @@ describe("Blueprint presale minting", function () {
         blueprint
           .connect(testArtist)
           .preSaleMint(0, testArtistPreSaleMintQuantity)
-      ).to.be.revertedWith("Sale must be not started");
+      ).to.be.revertedWith("Must be presale or public sale");
     });
   });
 });

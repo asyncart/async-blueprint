@@ -486,10 +486,11 @@ contract BlueprintV12 is
         _mintQuantity(blueprintID, quantity, msg.sender);
     }
 
+    // TODO: @conlan, do you want to keep the naming here to preserve the interface even though the meaning of this function has changed?
     function preSaleMint(uint256 blueprintID, uint32 quantity) external {
         require(
-            _isBlueprintPreparedAndNotStarted(blueprintID),
-            "Sale must be not started"
+            _isBlueprintPreparedAndNotStarted(blueprintID) || _isSaleOngoing(blueprintID),
+            "Must be presale or public sale"
         );
         require(
             minterAddress == msg.sender ||
