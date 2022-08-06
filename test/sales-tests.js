@@ -132,7 +132,7 @@ describe("Blueprint Sales", function () {
       let blueprintValue = BigNumber.from(tenPieces).mul(oneEth);
       await blueprint
         .connect(user2)
-        .purchaseBlueprints(0, tenPieces, 0, [], { value: blueprintValue });
+        .purchaseBlueprints(0, tenPieces, tenPieces, 0, [], { value: blueprintValue });
       let result = await blueprint.blueprints(0);
       let expectedCap = oneThousandPieces - tenPieces;
       expect(result.capacity.toString()).to.be.equal(
@@ -150,7 +150,7 @@ describe("Blueprint Sales", function () {
       await expect(
         blueprint
           .connect(user2)
-          .purchaseBlueprints(0, tenPieces, 0, [], { value: blueprintValue })
+          .purchaseBlueprints(0, tenPieces, tenPieces, 0, [], { value: blueprintValue })
       ).to.be.revertedWith("not available to purchase");
     });
     describe("B: Sale + purchase interactions", function () {
@@ -160,7 +160,7 @@ describe("Blueprint Sales", function () {
         let blueprintValue = BigNumber.from(tenPieces).mul(oneEth);
         await blueprint
           .connect(user2)
-          .purchaseBlueprints(0, tenPieces, 0, [], { value: blueprintValue });
+          .purchaseBlueprints(0, tenPieces, tenPieces, 0, [], { value: blueprintValue });
         let expectedAmount = BigNumber.from(ownerBal);
         let newOwnerBal = await ContractOwner.getBalance();
         expect(newOwnerBal.toString()).to.be.equal(
@@ -177,7 +177,7 @@ describe("Blueprint Sales", function () {
         await expect(
           blueprint
             .connect(user2)
-            .purchaseBlueprints(0, tenPieces, 10, [], { value: blueprintValue })
+            .purchaseBlueprints(0, tenPieces, tenPieces, 10, [], { value: blueprintValue })
         ).to.be.revertedWith("cannot specify token amount");
       });
       it("3: should not allow purchase of more than capacity", async function () {
@@ -185,7 +185,7 @@ describe("Blueprint Sales", function () {
         let fiveHundredEth = fiveHundredPieces.mul(oneEth);
         await blueprint
           .connect(user1)
-          .purchaseBlueprints(0, fiveHundredPieces, 0, [], {
+          .purchaseBlueprints(0, fiveHundredPieces, fiveHundredPieces, 0, [], {
             value: fiveHundredEth,
           });
 
@@ -194,6 +194,7 @@ describe("Blueprint Sales", function () {
             .connect(user2)
             .purchaseBlueprints(
               0,
+              fiveHundredPieces.add(BigNumber.from(1)),
               fiveHundredPieces.add(BigNumber.from(1)),
               0,
               [],
@@ -225,7 +226,7 @@ describe("Blueprint Sales", function () {
         let blueprintValue = BigNumber.from(tenPieces).mul(oneEth);
         await blueprint
           .connect(user2)
-          .purchaseBlueprints(1, tenPieces, 0, [], { value: blueprintValue });
+          .purchaseBlueprints(1, tenPieces, tenPieces, 0, [], { value: blueprintValue });
         let expectedAmount = BigNumber.from(testPlatformBal);
         let newPlatformBal = await testPlatform.getBalance();
         expect(newPlatformBal.toString()).to.be.equal(
@@ -241,7 +242,7 @@ describe("Blueprint Sales", function () {
         let blueprintValue = BigNumber.from(tenPieces).mul(oneEth);
         await blueprint
           .connect(user2)
-          .purchaseBlueprints(0, tenPieces, 0, [], { value: blueprintValue });
+          .purchaseBlueprints(0, tenPieces, tenPieces, 0, [], { value: blueprintValue });
 
         await blueprint
           .connect(ContractOwner)
@@ -312,7 +313,7 @@ describe("Blueprint Sales", function () {
       await expect (
         blueprint
           .connect(user2)
-          .purchaseBlueprints(0, tenPieces, 0, [], { value: BigNumber.from(tenPieces).mul(oneEth) })
+          .purchaseBlueprints(0, tenPieces, tenPieces, 0, [], { value: BigNumber.from(tenPieces).mul(oneEth) })
       ).to.be.revertedWith("not available to purchase");
     });
     // TODO: consider a test that shows you can't pause a sale who's end timestamp has passed...but maybe we don't want this if we want the minter to be able
