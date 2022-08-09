@@ -6,11 +6,13 @@ import "@openzeppelin/contracts-upgradeable/token/ERC721/ERC721Upgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/access/AccessControlEnumerableUpgradeable.sol";
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "@openzeppelin/contracts/utils/cryptography/MerkleProof.sol";
+import "@openzeppelin/contracts/security/ReentrancyGuard.sol";
 
 contract BlueprintV12 is
     ERC721Upgradeable,
     HasSecondarySaleFees,
-    AccessControlEnumerableUpgradeable
+    AccessControlEnumerableUpgradeable,
+    ReentrancyGuard
 {
     using StringsUpgradeable for uint256;
 
@@ -435,6 +437,7 @@ contract BlueprintV12 is
     )
         external
         payable
+        nonReentrant
         BuyerWhitelistedOrSaleStarted(blueprintID, whitelistedQuantity, proof)
         isQuantityAvailableForPurchase(blueprintID, purchaseQuantity)
     {
@@ -444,8 +447,6 @@ contract BlueprintV12 is
                 purchaseQuantity <= blueprints[blueprintID].maxPurchaseAmount,
             "cannot buy > maxPurchaseAmount in one tx"
         );
-
-        require (tx.origin == msg.sender, "purchase not callable from other contract");
 
         address artist = blueprints[blueprintID].artist;
         _confirmPaymentAmountAndSettleSale(
@@ -467,6 +468,7 @@ contract BlueprintV12 is
     )
         external
         payable
+        nonReentrant
         BuyerWhitelistedOrSaleStarted(blueprintID, whitelistedQuantity, proof)
         isQuantityAvailableForPurchase(blueprintID, purchaseQuantity)
     {
@@ -476,8 +478,6 @@ contract BlueprintV12 is
                 purchaseQuantity <= blueprints[blueprintID].maxPurchaseAmount,
             "cannot buy > maxPurchaseAmount in one tx"
         );
-
-        require (tx.origin == msg.sender, "purchase not callable from other contract");
 
         address artist = blueprints[blueprintID].artist;
         _confirmPaymentAmountAndSettleSale(
@@ -492,7 +492,13 @@ contract BlueprintV12 is
     }
 
     // TODO: @conlan, do you want to keep the naming here to preserve the interface even though the meaning of this function has changed?
-    function preSaleMint(uint256 blueprintID, uint32 quantity) external {
+    function preSaleMint(
+        uint256 blueprintID,
+        uint32 quantity
+    ) 
+        external
+        nonReentrant 
+    {
         require(
             _isBlueprintPreparedAndNotStarted(blueprintID) || _isSaleOngoing(blueprintID),
             "Must be presale or public sale"
