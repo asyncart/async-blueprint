@@ -146,7 +146,7 @@ describe("ERC20 interactions", function () {
     it("5: should allow users to purchase blueprints", async function () {
       await blueprint
         .connect(user2)
-        .purchaseBlueprints(0, tenPieces, tenEth, []);
+        .purchaseBlueprints(0, tenPieces, tenPieces, tenEth, []);
       let result = await blueprint.blueprints(0);
       let expectedCap = fiveHundredPieces - tenPieces;
       expect(result.capacity.toString()).to.be.equal(
@@ -166,7 +166,7 @@ describe("ERC20 interactions", function () {
 
         await blueprint
           .connect(user2)
-          .purchaseBlueprints(0, tenPieces, tenEth, []);
+          .purchaseBlueprints(0, tenPieces, tenPieces, tenEth, []);
         let expectedAmount = BigNumber.from(ownerBal);
         let newOwnerBal = await erc20.balanceOf(ContractOwner.address);
         expect(newOwnerBal.toString()).to.be.equal(
@@ -182,20 +182,21 @@ describe("ERC20 interactions", function () {
         await expect(
           blueprint
             .connect(user2)
-            .purchaseBlueprints(0, tenPieces, 10, [], { value: 10 })
+            .purchaseBlueprints(0, tenPieces, tenPieces, 10, [], { value: 10 })
         ).to.be.revertedWith("cannot specify eth amount");
       });
       it("3: should not allow purchase of more than capacity", async function () {
         let fiveHundredEth = fiveHundredPieces.mul(oneEth);
         await blueprint
           .connect(user1)
-          .purchaseBlueprints(0, fiveHundredPieces, fiveHundredEth, []);
+          .purchaseBlueprints(0, fiveHundredPieces, fiveHundredPieces, fiveHundredEth, []);
 
         await expect(
           blueprint
             .connect(user2)
             .purchaseBlueprints(
               0,
+              fiveHundredPieces.add(BigNumber.from(1)),
               fiveHundredPieces.add(BigNumber.from(1)),
               fiveHundredEth.add(oneEth),
               []
@@ -204,7 +205,7 @@ describe("ERC20 interactions", function () {
       });
       it("4: should not allow sale for less than price", async function () {
         await expect(
-          blueprint.connect(user2).purchaseBlueprints(0, tenPieces, oneEth, [])
+          blueprint.connect(user2).purchaseBlueprints(0, tenPieces, tenPieces, oneEth, [])
         ).to.be.revertedWith("Purchase amount must match price");
       });
     });

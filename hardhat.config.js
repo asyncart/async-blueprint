@@ -41,19 +41,15 @@ module.exports = {
   namedAccounts: {
     deployer: 0,
   },
-  // networks: {
-  //   hardhat: {
-  //     allowUnlimitedContractSize: true,
-  //     initialBaseFeePerGas: 0,
-  //   },
-  //   rinkeby: {
-  //     url: alchemyUrl,
-  //     accounts: [`0x${rinkebyPrivateKey}`],
-  //   },
-  // },
-  // etherscan: {
-  //   // Your API key for Etherscan
-  //   // Obtain one at https://etherscan.io/
-  //   apiKey: etherscanApiKey,
-  // },
+  networks: {
+    hardhat: {
+      allowUnlimitedContractSize: true,
+      initialBaseFeePerGas: 0,
+    }
+  },
+  etherscan: {
+    // Your API key for Etherscan
+    // Obtain one at https://etherscan.io/
+    apiKey: etherscanApiKey,
+  }
 };

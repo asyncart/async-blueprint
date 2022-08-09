@@ -2,16 +2,17 @@
 pragma solidity 0.8.4;
 
 import "./abstract/HasSecondarySaleFees.sol";
-
 import "@openzeppelin/contracts-upgradeable/token/ERC721/ERC721Upgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/access/AccessControlEnumerableUpgradeable.sol";
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "@openzeppelin/contracts/utils/cryptography/MerkleProof.sol";
+import "@openzeppelin/contracts/security/ReentrancyGuard.sol";
 
 contract BlueprintV12 is
     ERC721Upgradeable,
     HasSecondarySaleFees,
-    AccessControlEnumerableUpgradeable
+    AccessControlEnumerableUpgradeable,
+    ReentrancyGuard
 {
     using StringsUpgradeable for uint256;
 
@@ -60,7 +61,6 @@ contract BlueprintV12 is
         bytes32 merkleroot;
         SaleState saleState;    
         Fees feeRecipientInfo;
-        mapping(address => bool) claimedWhitelistedPieces;
     }
 
     event BlueprintSeed(uint256 blueprintID, string randomSeed);
@@ -116,13 +116,13 @@ contract BlueprintV12 is
 
     modifier BuyerWhitelistedOrSaleStarted(
         uint256 _blueprintID,
-        uint32 _quantity,
+        uint32 _whitelistedQuantity,
         bytes32[] calldata proof
     ) {
         require(
             _isSaleOngoing(_blueprintID) ||
                 (_isBlueprintPreparedAndNotStarted(_blueprintID) &&
-                    userWhitelisted(_blueprintID, uint256(_quantity), proof)),
+                    userWhitelisted(_blueprintID, uint256(_whitelistedQuantity), proof)),
             "not available to purchase"
         );
         _;
@@ -203,10 +203,6 @@ contract BlueprintV12 is
         bytes32[] calldata proof
     ) internal view returns (bool) {
         require(proof.length != 0, "no proof provided");
-        require(
-            !blueprints[_blueprintID].claimedWhitelistedPieces[msg.sender],
-            "already claimed"
-        );
         bytes32 _merkleroot = blueprints[_blueprintID].merkleroot;
         return _verify(_leaf(msg.sender, _quantity), _merkleroot, proof);
     }
@@ -321,12 +317,13 @@ contract BlueprintV12 is
         setFeeRecipients(_blueprintID, _feeRecipientInfo);
     }
 
-    function resetClaimedStatus (
+    // TODO: this doesn't apply really with variable presale mints probably delete. We could change this to a method for the minter to overwrite any users whitelisted
+    //       amount arbitrarily but that seems a bit dangerous//not decentralized. (i.e. minter could wipe all whitelisted users for no reason on any Blueprint)
+    /*function resetClaimedStatus (
         uint256 _blueprintID,
         address _minter
     ) external onlyRole(MINTER_ROLE) {
-        blueprints[_blueprintID].claimedWhitelistedPieces[_minter] = false;
-    }
+    }*/
 
     function updateBlueprintArtist (
         uint256 _blueprintID,
@@ -417,77 +414,91 @@ contract BlueprintV12 is
         emit SaleUnpaused(blueprintID);
     }
 
+    function _updateMerkleRootForPurchase(
+        uint256 blueprintID,
+        bytes32[] memory oldProof,
+        uint32 remainingWhitelistAmount
+    ) 
+        internal
+    {
+        bool[] memory proofFlags = new bool[](oldProof.length);
+        bytes32[] memory leaves = new bytes32[](1);
+        leaves[0] = _leaf(msg.sender, uint256(remainingWhitelistAmount));
+        blueprints[blueprintID].merkleroot = MerkleProof.processMultiProof(oldProof, proofFlags, leaves);
+    }
+
     function purchaseBlueprintsTo(
         uint256 blueprintID,
-        uint32 quantity,
+        uint32 purchaseQuantity,
+        uint32 whitelistedQuantity,
         uint256 tokenAmount,
         bytes32[] calldata proof,
         address nftRecipient
     )
         external
         payable
-        BuyerWhitelistedOrSaleStarted(blueprintID, quantity, proof)
-        isQuantityAvailableForPurchase(blueprintID, quantity)
+        nonReentrant
+        BuyerWhitelistedOrSaleStarted(blueprintID, whitelistedQuantity, proof)
+        isQuantityAvailableForPurchase(blueprintID, purchaseQuantity)
     {
+        require(purchaseQuantity <= whitelistedQuantity, "cannot purchase > whitelisted amount");
         require(
             blueprints[blueprintID].maxPurchaseAmount == 0 ||
-                quantity <= blueprints[blueprintID].maxPurchaseAmount,
+                purchaseQuantity <= blueprints[blueprintID].maxPurchaseAmount,
             "cannot buy > maxPurchaseAmount in one tx"
         );
 
-        require (tx.origin == msg.sender, "purchase not callable from other contract");
-
-        address _artist = blueprints[blueprintID].artist;
+        address artist = blueprints[blueprintID].artist;
         _confirmPaymentAmountAndSettleSale(
             blueprintID,
-            quantity,
+            purchaseQuantity,
             tokenAmount,
-            _artist
+            artist
         );
-
-        if (blueprints[blueprintID].saleState == SaleState.not_started) {
-            blueprints[blueprintID].claimedWhitelistedPieces[msg.sender] = true;
-        }
-
-        _mintQuantity(blueprintID, quantity, nftRecipient);
+        _mintQuantity(blueprintID, purchaseQuantity, nftRecipient);
+        _updateMerkleRootForPurchase(blueprintID, proof, whitelistedQuantity - purchaseQuantity);
     }
 
     function purchaseBlueprints(
         uint256 blueprintID,
-        uint32 quantity,
+        uint32 purchaseQuantity,
+        uint32 whitelistedQuantity,
         uint256 tokenAmount,
         bytes32[] calldata proof
     )
         external
         payable
-        BuyerWhitelistedOrSaleStarted(blueprintID, quantity, proof)
-        isQuantityAvailableForPurchase(blueprintID, quantity)
+        nonReentrant
+        BuyerWhitelistedOrSaleStarted(blueprintID, whitelistedQuantity, proof)
+        isQuantityAvailableForPurchase(blueprintID, purchaseQuantity)
     {
+        require(purchaseQuantity <= whitelistedQuantity, "cannot purchase > whitelisted amount");
         require(
             blueprints[blueprintID].maxPurchaseAmount == 0 ||
-                quantity <= blueprints[blueprintID].maxPurchaseAmount,
+                purchaseQuantity <= blueprints[blueprintID].maxPurchaseAmount,
             "cannot buy > maxPurchaseAmount in one tx"
         );
 
-        require (tx.origin == msg.sender, "purchase not callable from other contract");
-
-        address _artist = blueprints[blueprintID].artist;
+        address artist = blueprints[blueprintID].artist;
         _confirmPaymentAmountAndSettleSale(
             blueprintID,
-            quantity,
+            purchaseQuantity,
             tokenAmount,
-            _artist
+            artist
         );
 
-        if (blueprints[blueprintID].saleState == SaleState.not_started) {
-            blueprints[blueprintID].claimedWhitelistedPieces[msg.sender] = true;
-        }
-
-        _mintQuantity(blueprintID, quantity, msg.sender);
+        _mintQuantity(blueprintID, purchaseQuantity, msg.sender);
+        _updateMerkleRootForPurchase(blueprintID, proof, whitelistedQuantity - purchaseQuantity);
     }
 
     // TODO: @conlan, do you want to keep the naming here to preserve the interface even though the meaning of this function has changed?
-    function preSaleMint(uint256 blueprintID, uint32 quantity) external {
+    function preSaleMint(
+        uint256 blueprintID,
+        uint32 quantity
+    ) 
+        external
+        nonReentrant 
+    {
         require(
             _isBlueprintPreparedAndNotStarted(blueprintID) || _isSaleOngoing(blueprintID),
             "Must be presale or public sale"

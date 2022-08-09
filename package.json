@@ -6,12 +6,13 @@
     "coverage": "hardhat coverage",
     "deploy": "hardhat deploy",
     "deploy-rinkeby": "hardhat deploy --network rinkeby",
-    "verify": "npx hardhat verify --network rinkeby"
+    "verify": "npx hardhat verify --network rinkeby",
+    "clean": "hardhat clean"
   },
   "dependencies": {
     "@nomiclabs/hardhat-ethers": "^2.0.2",
     "@nomiclabs/hardhat-waffle": "^2.0.1",
-    "@openzeppelin/contracts": "^4.2.0",
+    "@openzeppelin/contracts": "^4.7.0",
     "@openzeppelin/contracts-upgradeable": "^4.3.2",
     "@openzeppelin/hardhat-upgrades": "^1.10.0",
     "chai": "^4.3.4",
