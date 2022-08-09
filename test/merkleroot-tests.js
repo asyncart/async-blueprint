@@ -1,4 +1,3 @@
-const mapping = require("./merkle_mapping.json");
 const { expect } = require("chai");
 const { MerkleTree } = require("merkletreejs");
 const keccak256 = require("keccak256");
@@ -34,9 +33,23 @@ function hashToken(account, quantity) {
   );
 }
 
+function computeMerkleFromMapping(mapping) {
+  return new MerkleTree(
+    Object.entries(mapping).map((mapping) => hashToken(...mapping)),
+    keccak256,
+    { sortPairs: true }
+  );
+}
+
 describe("Merkleroot Tests", function () {
+
+  // whitelist mapping
+  let mapping = {
+    "0x70997970C51812dc3A010C7d01b50e0d17dc79C8": "10",
+    "0x3C44CdDdB6a900fa2b585dd299e03d12FA4293BC": "2"
+  }
+
   before(async function () {
-    console.log("A");
     this.accounts = await ethers.getSigners();
     this.merkleTree = new MerkleTree(
       Object.entries(mapping).map((mapping) => hashToken(...mapping)),
@@ -80,48 +93,15 @@ describe("Merkleroot Tests", function () {
           feeRecipients
         );
     });
-    let capacity = tenThousandPieces;
-    let index = BigNumber.from(0);
-    for (const [account, quantity] of Object.entries(mapping)) {
-      it("element", async function () {
-        let buyer;
-        if (user1.address == account) {
-          buyer = user1;
-        } else {
-          buyer = user2;
-        }
-        const proof = this.merkleTree.getHexProof(hashToken(account, quantity));
-        const blueprintValue = BigNumber.from(quantity).mul(oneEth);
-        await blueprint
-          .connect(buyer)
-          .purchaseBlueprints(0, quantity, 0, proof, { value: blueprintValue });
-        let result = await blueprint.blueprints(0);
-        capacity = capacity - quantity;
-        expect(result.capacity.toString()).to.be.equal(
-          BigNumber.from(capacity).toString()
-        );
-        //should end on the next index
-        //this user owns 0 - 9, next user will own 10 - x
-        index = index.add(BigNumber.from(quantity));
-        expect(result.erc721TokenIndex.toString()).to.be.equal(
-          BigNumber.from(index).toString()
-        );
-        await expect(
-          blueprint.connect(buyer).purchaseBlueprints(0, quantity, 0, proof, {
-            value: blueprintValue,
-          })
-        ).to.be.revertedWith("already claimed");
-      });
-    }
-    it("2: should not allow non whitelisted user", async function () {
-      const proof = this.merkleTree.getHexProof(hashToken(user2.address, 1));
+    it("1: should not allow non whitelisted user", async function () {
+      const proof = this.merkleTree.getHexProof(hashToken(user2.address, 2));
       await expect(
         blueprint
           .connect(user3)
-          .purchaseBlueprints(0, 1, 0, proof, { value: oneEth })
+          .purchaseBlueprints(0, 1, 1, 0, proof, { value: oneEth })
       ).to.be.revertedWith("not available to purchase");
     });
-    it("3: should not allow buyer when no merkle provided", async function () {
+    it("2: should not allow buyer when no merkle provided", async function () {
       await blueprint
         .connect(ContractOwner)
         .prepareBlueprint(
@@ -138,35 +118,88 @@ describe("Merkleroot Tests", function () {
           0,
           emptyFeeRecipients
         );
-      let result = await blueprint.blueprints(1);
-      expect(result.saleState.toString()).to.be.equal(
-        BigNumber.from(1).toString()
-      );
-      expect(result.artist).to.be.equal(user3.address);
-      expect(result.price.toString()).to.be.equal(oneEth.div(2).toString());
-      expect(result.capacity.toString()).to.be.equal(
-        BigNumber.from(tenThousandPieces).toString()
-      );
-      expect(result.erc721TokenIndex.toString()).to.be.equal(
-        tenThousandPieces.toString()
-      );
-      expect(result.baseTokenUri).to.be.equal(testUri);
 
       const proof = this.merkleTree.getHexProof(hashToken(user1.address, 10));
       const blueprintValue = BigNumber.from(1).mul(oneEth).div(2);
       await expect(
         blueprint
           .connect(user1)
-          .purchaseBlueprints(1, 1, 0, proof, { value: blueprintValue })
+          .purchaseBlueprints(1, 1, 1, 0, proof, { value: blueprintValue })
       ).to.be.revertedWith("not available to purchase");
     });
-    it("4: should revert when no proof provided", async function () {
+    it("3: should revert when no proof provided", async function () {
       const proof = this.merkleTree.getHexProof(hashToken(user1.address, 1));
       await expect(
         blueprint
           .connect(user3)
-          .purchaseBlueprints(0, 1, 0, proof, { value: oneEth })
+          .purchaseBlueprints(0, 1, 1, 0, proof, { value: oneEth })
       ).to.be.revertedWith("no proof provided");
     });
+    let capacity = tenThousandPieces;
+    let index = BigNumber.from(0);
+    for (const [account, quantity] of Object.entries(mapping)) {
+      it("element", async function () {
+        let buyer;
+        if (user1.address == account) {
+          buyer = user1;
+        } else {
+          buyer = user2;
+        }
+
+        // purchase half of whitelisted amount
+        let quantityToPurchase = (parseInt(quantity)/2).toString()
+        let proof = this.merkleTree.getHexProof(hashToken(account, quantity));
+        const blueprintValue = BigNumber.from(quantityToPurchase).mul(oneEth);
+        await blueprint
+          .connect(buyer)
+          .purchaseBlueprints(0, quantityToPurchase, quantity, 0, proof, { value: blueprintValue });
+
+        // assert on state changes of first purchase
+        let result = await blueprint.blueprints(0);
+        capacity = capacity - quantityToPurchase;
+        expect(result.capacity.toString()).to.be.equal(
+          BigNumber.from(capacity).toString()
+        );
+        mapping[account] = (parseInt(quantity) - parseInt(quantityToPurchase)).toString()
+        this.merkleTree = computeMerkleFromMapping(mapping)
+        expect(result.merkleroot).to.be.equal(this.merkleTree.getHexRoot());
+        //should end on the next index
+        //this user owns 0 - 9, next user will own 10 - x
+        index = index.add(BigNumber.from(quantityToPurchase));
+        expect(result.erc721TokenIndex.toString()).to.be.equal(
+          BigNumber.from(index).toString()
+        );
+
+        // purchase second half of whitelisted amount
+        proof = this.merkleTree.getHexProof(hashToken(account, quantityToPurchase));
+        await blueprint
+          .connect(buyer)
+          .purchaseBlueprints(0, quantityToPurchase, quantityToPurchase, 0, proof, { value: blueprintValue });
+
+        // assert on state changes of second purchase
+        result = await blueprint.blueprints(0);
+        capacity = capacity - quantityToPurchase;
+        expect(result.capacity.toString()).to.be.equal(
+          BigNumber.from(capacity).toString()
+        );
+        mapping[account] = "0"
+        this.merkleTree = computeMerkleFromMapping(mapping)
+        expect(result.merkleroot).to.be.equal(this.merkleTree.getHexRoot());
+        //should end on the next index
+        //this user owns 0 - 9, next user will own 10 - x
+        index = index.add(BigNumber.from(quantityToPurchase));
+        expect(result.erc721TokenIndex.toString()).to.be.equal(
+          BigNumber.from(index).toString()
+        );
+
+        // Assert that we cannot buy anymore, not the best assertion,
+        proof = this.merkleTree.getHexProof(hashToken(account, "0"));
+        await expect(
+          blueprint.connect(buyer).purchaseBlueprints(0, 1, 1, 0, proof, {
+            value: blueprintValue,
+          })
+        ).to.be.revertedWith("not available to purchase");
+      });
+    }
   });
 });
