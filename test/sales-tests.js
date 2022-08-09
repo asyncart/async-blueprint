@@ -12,6 +12,12 @@ const testUri = "https://randomUri/";
 const testHash = "fbejgnvnveorjgnt";
 const oneThousandPieces = 1000;
 const tenPieces = 10;
+const emptyFeeRecipients = {
+  primaryFeeBPS: [],
+  secondaryFeeBPS: [],
+  primaryFeeRecipients: [],
+  secondaryFeeRecipients: []
+}
 
 const sale_started = BigNumber.from(2).toString();
 const sale_paused = BigNumber.from(3).toString();
@@ -26,6 +32,14 @@ function hashToken(account, quantity) {
 }
 
 describe("Blueprint Sales", function () {
+
+  let feeRecipients = {
+    primaryFeeBPS: [],
+    secondaryFeeBPS: [],
+    primaryFeeRecipients: [],
+    secondaryFeeRecipients: []
+  }
+
   before(async function () {
     this.accounts = await ethers.getSigners();
     this.merkleTree = new MerkleTree(
@@ -37,15 +51,13 @@ describe("Blueprint Sales", function () {
   describe("A: Basic Blueprint sale tests", function () {
     let Blueprint;
     let blueprint;
-    let feeRecipients;
-    let feeBps;
 
     beforeEach(async function () {
       [ContractOwner, user1, user2, user3, testArtist, testPlatform] =
         await ethers.getSigners();
 
-      feeRecipients = [ContractOwner.address, testArtist.address];
-      feeBps = [1000, 9000];
+      feeRecipients.primaryFeeRecipients = [ContractOwner.address, testArtist.address];
+      feeRecipients.primaryFeeBPS = [1000, 9000];
 
       Blueprint = await ethers.getContractFactory("BlueprintV12");
       blueprint = await Blueprint.deploy();
@@ -63,11 +75,9 @@ describe("Blueprint Sales", function () {
           0,
           0,
           0,
-          0
+          0,
+          feeRecipients
         );
-      await blueprint
-        .connect(ContractOwner)
-        .setFeeRecipients(0, feeRecipients, feeBps, [], []);
       await blueprint.connect(ContractOwner).beginSale(0);
     });
     it("1: should begin sale of blueprint", async function () {
@@ -111,7 +121,8 @@ describe("Blueprint Sales", function () {
           0,
           0,
           0,
-          0
+          0,
+          emptyFeeRecipients
         );
       await expect(
         blueprint.connect(ContractOwner).pauseSale(1)
@@ -204,7 +215,8 @@ describe("Blueprint Sales", function () {
             0,
             0,
             0,
-            0
+            0,
+            emptyFeeRecipients
           );
         await blueprint.connect(ContractOwner).beginSale(1);
         await blueprint.setAsyncFeeRecipient(testPlatform.address);
@@ -243,15 +255,13 @@ describe("Blueprint Sales", function () {
   describe("C: Expired timestamp sales tests", function () {
     let Blueprint;
     let blueprint;
-    let feeRecipients;
-    let feeBps;
 
     beforeEach(async function () {
       [ContractOwner, user1, user2, user3, testArtist, testPlatform] =
         await ethers.getSigners();
 
-      feeRecipients = [ContractOwner.address, testArtist.address];
-      feeBps = [1000, 9000];
+      feeRecipients.primaryFeeRecipients = [ContractOwner.address, testArtist.address];
+      feeRecipients.primaryFeeBPS = [1000, 9000];
 
       Blueprint = await ethers.getContractFactory("BlueprintV12");
       blueprint = await Blueprint.deploy();
@@ -273,11 +283,9 @@ describe("Blueprint Sales", function () {
           0,
           0,
           0,
-          BigNumber.from(nextBlockTimestamp).add(10)
+          BigNumber.from(nextBlockTimestamp).add(10),
+          feeRecipients
         );
-      await blueprint
-        .connect(ContractOwner)
-        .setFeeRecipients(0, feeRecipients, feeBps, [], []);
       await blueprint.connect(ContractOwner).beginSale(0);
     });
     // TODO(sorend): strategy for testing these cases with ~300s inaccuracy in hardhat newtwork timestamp

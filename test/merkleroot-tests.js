@@ -11,6 +11,12 @@ const testUri = "https://randomUri/";
 const testHash = "fbejgnvnveorjgnt";
 const tenThousandPieces = 10000;
 const zero = BigNumber.from(0).toString();
+const emptyFeeRecipients = {
+  primaryFeeBPS: [],
+  secondaryFeeBPS: [],
+  primaryFeeRecipients: [],
+  secondaryFeeRecipients: []
+}
 
 const tenPieces = 10;
 
@@ -42,14 +48,18 @@ describe("Merkleroot Tests", function () {
   describe("A: Mint all whitelisted", function () {
     let Blueprint;
     let blueprint;
-    let feeRecipients;
-    let feeBps;
+    let feeRecipients = {
+      primaryFeeBPS: [],
+      secondaryFeeBPS: [],
+      primaryFeeRecipients: [],
+      secondaryFeeRecipients: []
+    }
     before(async function () {
       [ContractOwner, user1, user2, user3, testArtist, testPlatform] =
         await ethers.getSigners();
 
-      feeRecipients = [ContractOwner.address, testArtist.address];
-      feeBps = [1000, 9000];
+      feeRecipients.primaryFeeRecipients = [ContractOwner.address, testArtist.address];
+      feeRecipients.primaryFeeBPS = [1000, 9000];
       Blueprint = await ethers.getContractFactory("BlueprintV12");
       blueprint = await Blueprint.deploy();
       blueprint.initialize("Async Blueprint", "ABP", ContractOwner.address);
@@ -66,11 +76,9 @@ describe("Merkleroot Tests", function () {
           0,
           0,
           0,
-          0
+          0,
+          feeRecipients
         );
-      await blueprint
-        .connect(ContractOwner)
-        .setFeeRecipients(0, feeRecipients, feeBps, [], []);
     });
     let capacity = tenThousandPieces;
     let index = BigNumber.from(0);
@@ -127,7 +135,8 @@ describe("Merkleroot Tests", function () {
           0,
           0,
           0,
-          0
+          0,
+          emptyFeeRecipients
         );
       let result = await blueprint.blueprints(1);
       expect(result.saleState.toString()).to.be.equal(

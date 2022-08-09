@@ -11,6 +11,12 @@ const testUri = "https://randomUri/";
 const testHash = "fbejgnvnveorjgnt";
 const oneThousandPieces = 1000;
 const zero = BigNumber.from(0).toString();
+const emptyFeeRecipients = {
+  primaryFeeBPS: [],
+  secondaryFeeBPS: [],
+  primaryFeeRecipients: [],
+  secondaryFeeRecipients: []
+}
 const testPlatformPreSaleMintQuantity = 15;
 const testArtistPreSaleMintQuantity = 17;
 const testMaxPurchaseAmount = 0;
@@ -37,15 +43,19 @@ describe("Blueprint presale minting", function () {
   describe("A: Presale minting functionality tests", function () {
     let Blueprint;
     let blueprint;
-    let feeRecipients;
-    let feeBps;
+    let feeRecipients = {
+      primaryFeeBPS: [],
+      secondaryFeeBPS: [],
+      primaryFeeRecipients: [],
+      secondaryFeeRecipients: []
+    }
 
     beforeEach(async function () {
       [ContractOwner, user1, user2, user3, testArtist, testPlatform] =
         await ethers.getSigners();
 
-      feeRecipients = [ContractOwner.address, testArtist.address];
-      feeBps = [1000, 9000];
+      feeRecipients.primaryFeeRecipients = [ContractOwner.address, testArtist.address];
+      feeRecipients.primaryFeeBPS = [1000, 9000];
 
       Blueprint = await ethers.getContractFactory("BlueprintV12");
       blueprint = await Blueprint.deploy();
@@ -63,11 +73,9 @@ describe("Blueprint presale minting", function () {
           testArtistPreSaleMintQuantity,
           testPlatformPreSaleMintQuantity,
           testMaxPurchaseAmount,
-          0
+          0,
+          feeRecipients
         );
-      await blueprint
-        .connect(ContractOwner)
-        .setFeeRecipients(0, feeRecipients, feeBps, [], []);
     });
     it("1: Should allow the platform to mint presale", async function () {
       await blueprint
@@ -128,7 +136,7 @@ describe("Blueprint presale minting", function () {
         blueprint
           .connect(testArtist)
           .preSaleMint(0, testArtistPreSaleMintQuantity)
-      ).to.be.revertedWith("Must be prepared and not started");
+      ).to.be.revertedWith("Sale must be not started");
     });
     it("7: Should not allow presale mint when sale paused", async function () {
       await blueprint.connect(ContractOwner).beginSale(0);
@@ -137,7 +145,7 @@ describe("Blueprint presale minting", function () {
         blueprint
           .connect(testArtist)
           .preSaleMint(0, testArtistPreSaleMintQuantity)
-      ).to.be.revertedWith("Must be prepared and not started");
+      ).to.be.revertedWith("Sale must be not started");
     });
   });
 });

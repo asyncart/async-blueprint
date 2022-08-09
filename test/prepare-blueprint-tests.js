@@ -11,6 +11,12 @@ const testUri = "https://randomUri/";
 const testHash = "fbejgnvnveorjgnt";
 const tenThousandPieces = 10000;
 const zero = BigNumber.from(0).toString();
+const emptyFeeRecipients = {
+  primaryFeeBPS: [],
+  secondaryFeeBPS: [],
+  primaryFeeRecipients: [],
+  secondaryFeeRecipients: []
+}
 
 function hashToken(account, quantity) {
   return Buffer.from(
@@ -33,15 +39,19 @@ describe("Prepare Blueprint", function () {
   describe("A: Blueprint prepation tests", function () {
     let Blueprint;
     let blueprint;
-    let feeRecipients;
-    let feeBps;
+    let feeRecipients = {
+      primaryFeeBPS: [],
+      secondaryFeeBPS: [],
+      primaryFeeRecipients: [],
+      secondaryFeeRecipients: []
+    }
 
     beforeEach(async function () {
       [ContractOwner, user1, user2, user3, testArtist, testPlatform] =
         await ethers.getSigners();
 
-      feeRecipients = [ContractOwner.address, testArtist.address];
-      feeBps = [1000, 9000];
+      feeRecipients.primaryFeeRecipients = [ContractOwner.address, testArtist.address];
+      feeRecipients.primaryFeeBPS = [1000, 9000];
 
       Blueprint = await ethers.getContractFactory("BlueprintV12");
       blueprint = await Blueprint.deploy();
@@ -61,11 +71,9 @@ describe("Prepare Blueprint", function () {
           0,
           0,
           0,
-          BigNumber.from(0)
+          BigNumber.from(0),
+          feeRecipients
         );
-      await blueprint
-        .connect(ContractOwner)
-        .setFeeRecipients(0, feeRecipients, feeBps, [], []);
 
       let result = await blueprint.blueprints(0);
       expect(result.saleState.toString()).to.be.equal(
@@ -95,7 +103,8 @@ describe("Prepare Blueprint", function () {
             0,
             0,
             0,
-            BigNumber.from(1)
+            BigNumber.from(1),
+            emptyFeeRecipients
           )
       ).to.be.revertedWith("Sale ended");
     });
@@ -114,7 +123,8 @@ describe("Prepare Blueprint", function () {
           0,
           0,
           0,
-          BigNumber.from(saleEndTimestamp)
+          BigNumber.from(saleEndTimestamp),
+          emptyFeeRecipients
         )
       let result = await blueprint.blueprints(0);
       expect(result.saleEndTimestamp.toString()).to.be.equal(saleEndTimestamp.toString());
@@ -133,7 +143,8 @@ describe("Prepare Blueprint", function () {
           0,
           0,
           0,
-          BigNumber.from(0)
+          BigNumber.from(0),
+          emptyFeeRecipients
         );
       let result = await blueprint.blueprints(0);
       await expect(result.artist).to.be.equal(testArtist.address);
@@ -153,13 +164,14 @@ describe("Prepare Blueprint", function () {
           0,
           0,
           0,
-          BigNumber.from(0)
+          BigNumber.from(0),
+          emptyFeeRecipients
         );
-
+        
       await expect(
         blueprint
           .connect(ContractOwner)
-          .setFeeRecipients(0, misFeeRecips, feeBps, [], [])
+          .setFeeRecipients(0, { ...feeRecipients, primaryFeeRecipients: misFeeRecips })
       ).to.be.revertedWith("mismatched recipients & Bps");
     });
     it("should not allow fee bps to exceed 10000", async function () {
@@ -177,13 +189,14 @@ describe("Prepare Blueprint", function () {
           0,
           0,
           0,
-          BigNumber.from(0)
+          BigNumber.from(0),
+          emptyFeeRecipients
         );
       await expect(
         blueprint
           .connect(ContractOwner)
-          .setFeeRecipients(0, feeRecipients, mismatchBps, [], [])
-      ).to.be.revertedWith("Fee Bps exceed maximum");
+          .setFeeRecipients(0, { ...feeRecipients, primaryFeeBPS: mismatchBps })
+      ).to.be.revertedWith("Fee Bps > maximum");
     });
     it("should not allow sale for unprepared blueprint", async function () {
       await expect(

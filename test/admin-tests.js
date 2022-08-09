@@ -8,21 +8,22 @@ const testHash = "fbejgnvnveorjgnt";
 const tenThousandPieces = 10000;
 const zero = BigNumber.from(0).toString();
 
-const emptyFeeRecipients = [];
-const emptyFeePercentages = [];
-
 describe("Admin Blueprint Tests", function () {
   let Blueprint;
   let blueprint;
-  let feeRecipients;
-  let feeBps;
+  let feeRecipients = {
+    primaryFeeBPS: [],
+    secondaryFeeBPS: [],
+    primaryFeeRecipients: [],
+    secondaryFeeRecipients: []
+  }
 
   beforeEach(async function () {
     [ContractOwner, user1, user2, user3, testArtist, testPlatform] =
       await ethers.getSigners();
 
-    feeRecipients = [ContractOwner.address, testArtist.address];
-    feeBps = [1000, 9000];
+    feeRecipients.primaryFeeRecipients = [ContractOwner.address, testArtist.address];
+    feeRecipients.primaryFeeBPS = [1000, 9000];
 
     Blueprint = await ethers.getContractFactory("BlueprintV12");
     blueprint = await Blueprint.deploy();
@@ -43,11 +44,9 @@ describe("Admin Blueprint Tests", function () {
         0,
         0,
         0,
-        0
+        0,
+        feeRecipients
       );
-    await blueprint
-      .connect(user2)
-      .setFeeRecipients(0, feeRecipients, feeBps, [], []);
     let result = await blueprint.blueprints(0);
     expect(result.artist).to.be.equal(testArtist.address);
   });
@@ -73,11 +72,9 @@ describe("Admin Blueprint Tests", function () {
         0,
         0,
         0,
-        0
+        0,
+        feeRecipients
       );
-    await blueprint
-      .connect(ContractOwner)
-      .setFeeRecipients(0, feeRecipients, feeBps, [], []);
     let updatedUri = "http://updatedUri/";
     await blueprint.connect(ContractOwner).updateMinterAddress(user2.address);
     await blueprint
@@ -90,7 +87,7 @@ describe("Admin Blueprint Tests", function () {
     let updatedUri = "http://updatedUri/";
     await expect(
       blueprint.connect(ContractOwner).updateBlueprintTokenUri(0, updatedUri)
-    ).to.be.revertedWith("blueprint not prepared");
+    ).to.be.revertedWith("not prepared");
   });
   it("2.c: should lock token URI", async function () {
     await blueprint
@@ -106,17 +103,15 @@ describe("Admin Blueprint Tests", function () {
         0,
         0,
         0,
-        0
+        0,
+        feeRecipients
       );
-    await blueprint
-      .connect(ContractOwner)
-      .setFeeRecipients(0, feeRecipients, feeBps, [], []);
     let updatedUri = "http://updatedUri/";
 
     await blueprint.connect(ContractOwner).lockBlueprintTokenUri(0);
     await expect(
       blueprint.connect(ContractOwner).updateBlueprintTokenUri(0, updatedUri)
-    ).to.be.revertedWith("blueprint URI locked");
+    ).to.be.revertedWith("URI locked");
   });
   // it("2.d: should allow platform to update base token uri", async function () {
   //   await blueprint
@@ -159,7 +154,8 @@ describe("Admin Blueprint Tests", function () {
         0,
         0,
         0,
-        0
+        0,
+        feeRecipients
       );
     let randomSeed = "randomSeedHash";
     await expect(blueprint.revealBlueprintSeed(0, randomSeed))
@@ -227,7 +223,8 @@ describe("Admin Blueprint Tests", function () {
         0,
         0,
         0,
-        0
+        0,
+        feeRecipients
       );
     const newPrice = oneEth.mul(2);
     const newMintAmountArtist = 1;
