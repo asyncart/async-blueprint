@@ -317,14 +317,6 @@ contract BlueprintV12 is
         setFeeRecipients(_blueprintID, _feeRecipientInfo);
     }
 
-    // TODO: this doesn't apply really with variable presale mints probably delete. We could change this to a method for the minter to overwrite any users whitelisted
-    //       amount arbitrarily but that seems a bit dangerous//not decentralized. (i.e. minter could wipe all whitelisted users for no reason on any Blueprint)
-    /*function resetClaimedStatus (
-        uint256 _blueprintID,
-        address _minter
-    ) external onlyRole(MINTER_ROLE) {
-    }*/
-
     function updateBlueprintArtist (
         uint256 _blueprintID,
         address _newArtist
@@ -342,31 +334,6 @@ contract BlueprintV12 is
         blueprints[_blueprintID].capacity = _newCapacity;
 
         latestErc721TokenIndex = _newLatestErc721TokenIndex;
-    }
-
-    function updateBlueprintSettings (
-        uint256 _blueprintID,
-        uint128 _price,
-        uint32 _mintAmountArtist,
-        uint32 _mintAmountPlatform,
-        uint32 _newSaleState,
-        uint64 _newMaxPurchaseAmount,
-        uint128 _saleEndTimestamp,
-        bytes32 _merkleroot
-    )   external 
-        onlyRole(MINTER_ROLE) 
-        isSaleEndTimestampCurrentlyValid(_saleEndTimestamp)
-    {
-        blueprints[_blueprintID].price = _price;
-        blueprints[_blueprintID].mintAmountArtist = _mintAmountArtist;
-        blueprints[_blueprintID].mintAmountPlatform = _mintAmountPlatform;
-        // Do we want to validate that this is an accurate transition? i.e. not_started -> paused would be invalid, or enforce the modifiers on pause/unpause sale etc.
-        blueprints[_blueprintID].saleState = SaleState (_newSaleState);
-        blueprints[_blueprintID].merkleroot = _merkleroot; 
-        blueprints[_blueprintID].maxPurchaseAmount = _newMaxPurchaseAmount;
-        blueprints[_blueprintID].saleEndTimestamp = _saleEndTimestamp;
-
-        emit BlueprintSettingsUpdated(_blueprintID, _price, _mintAmountArtist, _mintAmountPlatform, _newSaleState, _newMaxPurchaseAmount, _saleEndTimestamp, _merkleroot);
     }
 
     function setFeeRecipients(
