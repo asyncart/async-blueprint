@@ -133,7 +133,7 @@ describe("Merkleroot Tests", function () {
         blueprint
           .connect(user3)
           .purchaseBlueprints(0, 1, 1, 0, proof, { value: oneEth })
-      ).to.be.revertedWith("no proof provided");
+      ).to.be.revertedWith("not available to purchase");
     });
     let capacity = tenThousandPieces;
     let index = BigNumber.from(0);
