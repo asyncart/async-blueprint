@@ -1,6 +1,7 @@
 //SPDX-License-Identifier: Unlicense
 pragma solidity 0.8.4;
 
+import "hardhat/console.sol";
 import "./abstract/HasSecondarySaleFees.sol";
 import "@openzeppelin/contracts-upgradeable/token/ERC721/ERC721Upgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/access/AccessControlEnumerableUpgradeable.sol";
@@ -186,7 +187,7 @@ contract BlueprintV12 is
         view
         returns (bool)
     {
-        return _saleEndTimestamp == 0 || _saleEndTimestamp > block.timestamp;
+        return _saleEndTimestamp > block.timestamp || _saleEndTimestamp == 0;
     }
 
     function _isBlueprintPreparedAndNotStarted(uint256 _blueprintID)
@@ -458,11 +459,10 @@ contract BlueprintV12 is
         _updateMerkleRootForPurchase(blueprintID, proof, whitelistedQuantity - purchaseQuantity);
     }
 
-    // TODO: @conlan, do you want to keep the naming here to preserve the interface even though the meaning of this function has changed?
-    function preSaleMint(
+    function artistMint(
         uint256 blueprintID,
         uint32 quantity
-    ) 
+    )
         external
         nonReentrant 
     {
@@ -853,6 +853,7 @@ contract BlueprintV12 is
         )
         returns (bool)
     {
+        // console.log(type(HasSecondarySaleFees).interfaceId);
         return
             ERC721Upgradeable.supportsInterface(interfaceId) ||
             ERC165StorageUpgradeable.supportsInterface(interfaceId) ||
