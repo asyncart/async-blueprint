@@ -51,5 +51,8 @@ module.exports = {
     // Your API key for Etherscan
     // Obtain one at https://etherscan.io/
     apiKey: etherscanApiKey,
+  },
+  contractSizer: {
+    runOnCompile: true
   }
 };
