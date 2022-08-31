@@ -120,9 +120,10 @@ contract BlueprintV12 is
         bytes32[] calldata proof
     ) {
         require(
+            // Sale must be ongoing OR
             _isSaleOngoing(_blueprintID) ||
-                (_isBlueprintPreparedAndNotStarted(_blueprintID) &&
-                    userWhitelisted(_blueprintID, uint256(_whitelistedQuantity), proof)),
+            // Must be presale and a whitelisted user
+            (_isBlueprintPreparedAndNotStarted(_blueprintID) && proof.length != 0 && _verify(_leaf(msg.sender, uint256(_whitelistedQuantity)), blueprints[_blueprintID].merkleroot, proof)),
             "not available to purchase"
         );
         _;
@@ -186,7 +187,7 @@ contract BlueprintV12 is
         view
         returns (bool)
     {
-        return _saleEndTimestamp == 0 || _saleEndTimestamp > block.timestamp;
+        return _saleEndTimestamp > block.timestamp || _saleEndTimestamp == 0;
     }
 
     function _isBlueprintPreparedAndNotStarted(uint256 _blueprintID)
@@ -195,16 +196,6 @@ contract BlueprintV12 is
         returns (bool)
     {
         return blueprints[_blueprintID].saleState == SaleState.not_started;
-    }
-
-    function userWhitelisted(
-        uint256 _blueprintID,
-        uint256 _quantity,
-        bytes32[] calldata proof
-    ) internal view returns (bool) {
-        require(proof.length != 0, "no proof provided");
-        bytes32 _merkleroot = blueprints[_blueprintID].merkleroot;
-        return _verify(_leaf(msg.sender, _quantity), _merkleroot, proof);
     }
 
     function feeArrayDataValid(
@@ -216,7 +207,7 @@ contract BlueprintV12 is
             "mismatched recipients & Bps"
         );
         uint32 totalPercent;
-        for (uint256 i = 0; i < _feeBPS.length; i++) {
+        for (uint256 i; i < _feeBPS.length; i++) {
             totalPercent = totalPercent + _feeBPS[i];
         }
         require(totalPercent <= 10000, "Fee Bps > maximum");
@@ -458,11 +449,10 @@ contract BlueprintV12 is
         _updateMerkleRootForPurchase(blueprintID, proof, whitelistedQuantity - purchaseQuantity);
     }
 
-    // TODO: @conlan, do you want to keep the naming here to preserve the interface even though the meaning of this function has changed?
-    function preSaleMint(
+    function artistMint(
         uint256 blueprintID,
         uint32 quantity
-    ) 
+    )
         external
         nonReentrant 
     {
@@ -498,7 +488,7 @@ contract BlueprintV12 is
     function _mintQuantity(uint256 _blueprintID, uint32 _quantity, address _nftRecipient) private {
         uint128 newTokenId = blueprints[_blueprintID].erc721TokenIndex;
         uint64 newCap = blueprints[_blueprintID].capacity;
-        for (uint16 i = 0; i < _quantity; i++) {
+        for (uint16 i; i < _quantity; i++) {
             require(newCap > 0, "quantity > cap");
             
             _mint(_nftRecipient, newTokenId + i);
@@ -623,7 +613,7 @@ contract BlueprintV12 is
     {
         require(
             _exists(tokenId),
-            "ERC721Metadata: URI query for nonexistent token"
+            "URI query for nonexistent token"
         );
 
         string memory baseURI = blueprints[tokenToBlueprintID[tokenId]].baseTokenUri;
@@ -719,7 +709,7 @@ contract BlueprintV12 is
         uint32[] memory _primaryFeeBPS = getPrimaryFeeBps(_blueprintID);
         uint256 feesPaid;
 
-        for (uint256 i = 0; i < _primaryFeeRecipients.length; i++) {
+        for (uint256 i; i < _primaryFeeRecipients.length; i++) {
             uint256 fee = (_amount * _primaryFeeBPS[i])/10000;
             feesPaid = feesPaid + fee;
             _payout(_primaryFeeRecipients[i], _erc20Token, fee);
@@ -854,6 +844,7 @@ contract BlueprintV12 is
         returns (bool)
     {
         return
+            interfaceId == type(HasSecondarySaleFees).interfaceId ||
             ERC721Upgradeable.supportsInterface(interfaceId) ||
             ERC165StorageUpgradeable.supportsInterface(interfaceId) ||
             AccessControlEnumerableUpgradeable.supportsInterface(interfaceId);

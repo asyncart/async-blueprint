@@ -17,8 +17,8 @@ const emptyFeeRecipients = {
   primaryFeeRecipients: [],
   secondaryFeeRecipients: []
 }
-const testPlatformPreSaleMintQuantity = 15;
-const testArtistPreSaleMintQuantity = 17;
+const testPlatformArtistMintQuantity = 15;
+const testArtistArtistMintQuantity = 17;
 const testMaxPurchaseAmount = 0;
 
 function hashToken(account, quantity) {
@@ -69,8 +69,8 @@ describe("Blueprint presale minting", function () {
           testHash,
           testUri,
           this.merkleTree.getHexRoot(),
-          testArtistPreSaleMintQuantity,
-          testPlatformPreSaleMintQuantity,
+          testArtistArtistMintQuantity,
+          testPlatformArtistMintQuantity,
           testMaxPurchaseAmount,
           0,
           feeRecipients
@@ -79,73 +79,73 @@ describe("Blueprint presale minting", function () {
     it("1: Should allow the platform to mint presale", async function () {
       await blueprint
         .connect(ContractOwner)
-        .preSaleMint(0, testPlatformPreSaleMintQuantity);
+        .artistMint(0, testPlatformArtistMintQuantity);
       let result = await blueprint.blueprints(0);
-      let expectedCap = oneThousandPieces - testPlatformPreSaleMintQuantity;
+      let expectedCap = oneThousandPieces - testPlatformArtistMintQuantity;
       expect(result.capacity.toString()).to.be.equal(
         BigNumber.from(expectedCap).toString()
       );
       //should end on the next index
       //this user owns 0 - 9, next user will own 10 - x
       expect(result.erc721TokenIndex.toString()).to.be.equal(
-        BigNumber.from(testPlatformPreSaleMintQuantity).toString()
+        BigNumber.from(testPlatformArtistMintQuantity).toString()
       );
       let platformBalance = await blueprint.balanceOf(ContractOwner.address);
-      expect(platformBalance).to.be.equal(testPlatformPreSaleMintQuantity);
+      expect(platformBalance).to.be.equal(testPlatformArtistMintQuantity);
     });
     it("2: Should allow the artist to mint presale", async function () {
       await blueprint
         .connect(testArtist)
-        .preSaleMint(0, testArtistPreSaleMintQuantity);
+        .artistMint(0, testArtistArtistMintQuantity);
       let result = await blueprint.blueprints(0);
-      let expectedCap = oneThousandPieces - testArtistPreSaleMintQuantity;
+      let expectedCap = oneThousandPieces - testArtistArtistMintQuantity;
       expect(result.capacity.toString()).to.be.equal(
         BigNumber.from(expectedCap).toString()
       );
       //should end on the next index
       //this user owns 0 - 9, next user will own 10 - x
       expect(result.erc721TokenIndex.toString()).to.be.equal(
-        BigNumber.from(testArtistPreSaleMintQuantity).toString()
+        BigNumber.from(testArtistArtistMintQuantity).toString()
       );
       let platformBalance = await blueprint.balanceOf(testArtist.address);
-      expect(platformBalance).to.be.equal(testArtistPreSaleMintQuantity);
+      expect(platformBalance).to.be.equal(testArtistArtistMintQuantity);
     });
     it("3: Should not allow the platform to mint more than allocation", async function () {
       await expect(
         blueprint
           .connect(ContractOwner)
-          .preSaleMint(0, testPlatformPreSaleMintQuantity + 1)
+          .artistMint(0, testPlatformArtistMintQuantity + 1)
       ).to.be.revertedWith("cannot mint quantity");
     });
     it("4: Should not allow the artist to mint more than allocation", async function () {
       await expect(
         blueprint
           .connect(testArtist)
-          .preSaleMint(0, testArtistPreSaleMintQuantity + 1)
+          .artistMint(0, testArtistArtistMintQuantity + 1)
       ).to.be.revertedWith("cannot mint quantity");
     });
     it("5: Should not allow other user to mint preSale", async function () {
       await expect(
-        blueprint.connect(user1).preSaleMint(0, testArtistPreSaleMintQuantity)
+        blueprint.connect(user1).artistMint(0, testArtistArtistMintQuantity)
       ).to.be.revertedWith("user cannot mint presale");
     });
     it("6: Should allow presale mint once sale started", async function () {
       await blueprint.connect(ContractOwner).beginSale(0);
       await blueprint
           .connect(testArtist)
-          .preSaleMint(0, testArtistPreSaleMintQuantity);
+          .artistMint(0, testArtistArtistMintQuantity);
       let result = await blueprint.blueprints(0);
-      let expectedCap = oneThousandPieces - testArtistPreSaleMintQuantity;
+      let expectedCap = oneThousandPieces - testArtistArtistMintQuantity;
       expect(result.capacity.toString()).to.be.equal(
         BigNumber.from(expectedCap).toString()
       );
       //should end on the next index
       //this user owns 0 - 9, next user will own 10 - x
       expect(result.erc721TokenIndex.toString()).to.be.equal(
-        BigNumber.from(testArtistPreSaleMintQuantity).toString()
+        BigNumber.from(testArtistArtistMintQuantity).toString()
       );
       let platformBalance = await blueprint.balanceOf(testArtist.address);
-      expect(platformBalance).to.be.equal(testArtistPreSaleMintQuantity);
+      expect(platformBalance).to.be.equal(testArtistArtistMintQuantity);
     });
     it("7: Should not allow presale mint when sale paused", async function () {
       await blueprint.connect(ContractOwner).beginSale(0);
@@ -153,7 +153,7 @@ describe("Blueprint presale minting", function () {
       await expect(
         blueprint
           .connect(testArtist)
-          .preSaleMint(0, testArtistPreSaleMintQuantity)
+          .artistMint(0, testArtistArtistMintQuantity)
       ).to.be.revertedWith("Must be presale or public sale");
     });
   });
