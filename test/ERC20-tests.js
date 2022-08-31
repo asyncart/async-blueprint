@@ -82,7 +82,7 @@ describe("ERC20 interactions", function () {
 
       await erc20.connect(user1).approve(blueprint.address, oneThousandTokens);
 
-      blueprint.initialize("Async Blueprint", "ABP", ContractOwner.address);
+      blueprint.initialize("Async Blueprint", "ABP", ContractOwner.address, ContractOwner.address);
       await blueprint
         .connect(ContractOwner)
         .prepareBlueprint(
@@ -141,7 +141,7 @@ describe("ERC20 interactions", function () {
         );
       await expect(
         blueprint.connect(ContractOwner).pauseSale(1)
-      ).to.be.revertedWith("Sale not ongoing");
+      ).to.be.revertedWith("Not ongoing");
     });
     it("5: should allow users to purchase blueprints", async function () {
       await blueprint
@@ -183,7 +183,7 @@ describe("ERC20 interactions", function () {
           blueprint
             .connect(user2)
             .purchaseBlueprints(0, tenPieces, tenPieces, 10, [], { value: 10 })
-        ).to.be.revertedWith("cannot specify eth amount");
+        ).to.be.revertedWith("eth value not zero");
       });
       it("3: should not allow purchase of more than capacity", async function () {
         let fiveHundredEth = fiveHundredPieces.mul(oneEth);
@@ -201,12 +201,12 @@ describe("ERC20 interactions", function () {
               fiveHundredEth.add(oneEth),
               []
             )
-        ).to.be.revertedWith("quantity exceeds capacity");
+        ).to.be.revertedWith("quantity too big");
       });
       it("4: should not allow sale for less than price", async function () {
         await expect(
           blueprint.connect(user2).purchaseBlueprints(0, tenPieces, tenPieces, oneEth, [])
-        ).to.be.revertedWith("Purchase amount must match price");
+        ).to.be.revertedWith("incorrect payment amount");
       });
     });
   });

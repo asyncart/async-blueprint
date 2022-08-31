@@ -27,7 +27,7 @@ describe("Admin Blueprint Tests", function () {
 
     Blueprint = await ethers.getContractFactory("BlueprintV12");
     blueprint = await Blueprint.deploy();
-    blueprint.initialize("Async Blueprint", "ABP", ContractOwner.address);
+    blueprint.initialize("Async Blueprint", "ABP", ContractOwner.address, ContractOwner.address);
   });
   it("1.a: should update minter role", async function () {
     await blueprint.connect(ContractOwner).updateMinterAddress(user2.address);

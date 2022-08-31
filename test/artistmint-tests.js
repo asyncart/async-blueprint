@@ -58,7 +58,7 @@ describe("Blueprint presale minting", function () {
 
       Blueprint = await ethers.getContractFactory("BlueprintV12");
       blueprint = await Blueprint.deploy();
-      blueprint.initialize("Async Blueprint", "ABP", ContractOwner.address);
+      blueprint.initialize("Async Blueprint", "ABP", ContractOwner.address, ContractOwner.address);
       await blueprint
         .connect(ContractOwner)
         .prepareBlueprint(
@@ -115,14 +115,14 @@ describe("Blueprint presale minting", function () {
         blueprint
           .connect(ContractOwner)
           .artistMint(0, testPlatformArtistMintQuantity + 1)
-      ).to.be.revertedWith("cannot mint quantity");
+      ).to.be.revertedWith("can't mint quantity");
     });
     it("4: Should not allow the artist to mint more than allocation", async function () {
       await expect(
         blueprint
           .connect(testArtist)
           .artistMint(0, testArtistArtistMintQuantity + 1)
-      ).to.be.revertedWith("cannot mint quantity");
+      ).to.be.revertedWith("can't mint quantity");
     });
     it("5: Should not allow other user to mint preSale", async function () {
       await expect(

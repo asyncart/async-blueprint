@@ -75,7 +75,7 @@ describe("Merkleroot Tests", function () {
       feeRecipients.primaryFeeBPS = [1000, 9000];
       Blueprint = await ethers.getContractFactory("BlueprintV12");
       blueprint = await Blueprint.deploy();
-      blueprint.initialize("Async Blueprint", "ABP", ContractOwner.address);
+      blueprint.initialize("Async Blueprint", "ABP", ContractOwner.address, ContractOwner.address);
       await blueprint
         .connect(ContractOwner)
         .prepareBlueprint(
@@ -99,7 +99,7 @@ describe("Merkleroot Tests", function () {
         blueprint
           .connect(user3)
           .purchaseBlueprints(0, 1, 1, 0, proof, { value: oneEth })
-      ).to.be.revertedWith("not available to purchase");
+      ).to.be.revertedWith("e");
     });
     it("2: should not allow buyer when no merkle provided", async function () {
       await blueprint
@@ -125,7 +125,7 @@ describe("Merkleroot Tests", function () {
         blueprint
           .connect(user1)
           .purchaseBlueprints(1, 1, 1, 0, proof, { value: blueprintValue })
-      ).to.be.revertedWith("not available to purchase");
+      ).to.be.revertedWith("e");
     });
     it("3: should revert when no proof provided", async function () {
       const proof = this.merkleTree.getHexProof(hashToken(user1.address, 1));
@@ -133,7 +133,7 @@ describe("Merkleroot Tests", function () {
         blueprint
           .connect(user3)
           .purchaseBlueprints(0, 1, 1, 0, proof, { value: oneEth })
-      ).to.be.revertedWith("not available to purchase");
+      ).to.be.revertedWith("e");
     });
     let capacity = tenThousandPieces;
     let index = BigNumber.from(0);
@@ -198,7 +198,7 @@ describe("Merkleroot Tests", function () {
           blueprint.connect(buyer).purchaseBlueprints(0, 1, 1, 0, proof, {
             value: blueprintValue,
           })
-        ).to.be.revertedWith("not available to purchase");
+        ).to.be.revertedWith("e");
       });
     }
   });
