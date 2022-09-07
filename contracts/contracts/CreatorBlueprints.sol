@@ -17,8 +17,6 @@ contract CreatorBlueprints is
     using StringsUpgradeable for uint256;
 
     uint32 public defaultPlatformPrimaryFeePercentage;    
-    uint32 public defaultBlueprintSecondarySalePercentage;
-    uint32 public defaultPlatformSecondarySalePercentage;
     uint64 public latestErc721TokenIndex;
 
     address public asyncSaleFeesRecipient;
@@ -27,6 +25,9 @@ contract CreatorBlueprints is
     
     mapping(address => uint256) failedTransferCredits;
     Blueprints public blueprint;
+    RoyaltyParameters public royaltyParameters;
+
+    string public contractURI; 
 
     bytes32 public constant MINTER_ROLE = keccak256("MINTER_ROLE");
 
@@ -39,9 +40,12 @@ contract CreatorBlueprints is
 
     struct Fees {
         uint32[] primaryFeeBPS;
-        uint32[] secondaryFeeBPS;
         address[] primaryFeeRecipients;
-        address[] secondaryFeeRecipients;
+    }
+
+    struct RoyaltyParameters {
+        address split;
+        uint32 royaltyCutBPS;
     }
 
     struct Blueprints {
@@ -59,6 +63,14 @@ contract CreatorBlueprints is
         bytes32 merkleroot;
         SaleState saleState;    
         Fees feeRecipientInfo;
+    }
+
+    struct CreatorBlueprintsInput {
+        string name;
+        string symbol;
+        string contractURI;
+        address minter;
+        address platform;
     }
 
     event BlueprintSeed(string randomSeed);
@@ -140,32 +152,37 @@ contract CreatorBlueprints is
         _;
     }
 
+    // allow 0 values for cut and split address  
+    modifier validRoyaltyParameters(
+        RoyaltyParameters calldata _royaltyParameters
+    ) {
+        require(_royaltyParameters.royaltyCutBPS <= 10000);
+        _;
+    }
+
     ///
     ///Initialize the implementation
     ///
     function initialize(
-        string memory name_,
-        string memory symbol_,
-        address minter,
-        address _platform
-    ) public initializer {
+        CreatorBlueprintsInput calldata creatorBlueprintsInput,
+        RoyaltyParameters calldata _royaltyParameters
+    ) public initializer validRoyaltyParameters(_royaltyParameters) {
         // Intialize parent contracts
-        ERC721Upgradeable.__ERC721_init(name_, symbol_);
+        ERC721Upgradeable.__ERC721_init(creatorBlueprintsInput.name, creatorBlueprintsInput.symbol);
         HasSecondarySaleFees._initialize();
         AccessControlUpgradeable.__AccessControl_init();
 
-        _setupRole(DEFAULT_ADMIN_ROLE, _platform);
-        _setupRole(MINTER_ROLE, minter);
+        _setupRole(DEFAULT_ADMIN_ROLE, creatorBlueprintsInput.platform);
+        _setupRole(MINTER_ROLE, creatorBlueprintsInput.minter);
 
-        platform = _platform;
-        minterAddress = minter;
+        platform = creatorBlueprintsInput.platform;
+        minterAddress = creatorBlueprintsInput.minter;
 
         defaultPlatformPrimaryFeePercentage = 2000; // 20%
 
-        defaultBlueprintSecondarySalePercentage = 750; // 7.5%
-        defaultPlatformSecondarySalePercentage = 250; // 2.5%
-
-        asyncSaleFeesRecipient = _platform;
+        asyncSaleFeesRecipient = creatorBlueprintsInput.platform;
+        contractURI = creatorBlueprintsInput.contractURI; 
+        royaltyParameters = _royaltyParameters;
     }
 
     function _isSaleOngoing()
@@ -320,8 +337,7 @@ contract CreatorBlueprints is
             blueprint.saleState != SaleState.not_prepared,
             "never prepared"
         );
-        if (feeArrayDataValid(_feeRecipientInfo.primaryFeeRecipients, _feeRecipientInfo.primaryFeeBPS) && 
-                feeArrayDataValid(_feeRecipientInfo.secondaryFeeRecipients, _feeRecipientInfo.secondaryFeeBPS)) {
+        if (feeArrayDataValid(_feeRecipientInfo.primaryFeeRecipients, _feeRecipientInfo.primaryFeeBPS)) {
             blueprint.feeRecipientInfo = _feeRecipientInfo;
         }
     }
@@ -629,22 +645,12 @@ contract CreatorBlueprints is
         defaultPlatformPrimaryFeePercentage = _basisPoints;
     }
 
-    function changeDefaultBlueprintSecondarySalePercentage(uint32 _basisPoints)
+    function updateRoyaltyParameters(RoyaltyParameters calldata _royaltyParameters) 
         external
         onlyRole(DEFAULT_ADMIN_ROLE)
+        validRoyaltyParameters(_royaltyParameters)
     {
-        require(_basisPoints + defaultPlatformSecondarySalePercentage <= 10000);
-        defaultBlueprintSecondarySalePercentage = _basisPoints;
-    }
-
-    function changeDefaultPlatformSecondarySalePercentage(uint32 _basisPoints)
-        external
-        onlyRole(DEFAULT_ADMIN_ROLE)
-    {
-        require(
-            _basisPoints + defaultBlueprintSecondarySalePercentage <= 10000
-        );
-        defaultPlatformSecondarySalePercentage = _basisPoints;
+        royaltyParameters = _royaltyParameters; 
     }
 
     function updatePlatformAddress(address _platform)
@@ -762,15 +768,9 @@ contract CreatorBlueprints is
         override
         returns (address[] memory)
     {
-        if (blueprint.feeRecipientInfo.secondaryFeeRecipients.length == 0) {
-            address[] memory feeRecipients = new address[](2);
-            feeRecipients[0] = (asyncSaleFeesRecipient);
-            feeRecipients[1] = (blueprint.artist);
-
-            return feeRecipients;
-        } else {
-            return blueprint.feeRecipientInfo.secondaryFeeRecipients;
-        }
+        address[] memory feeRecipients = new address[](1);
+        feeRecipients[0] = royaltyParameters.split;
+        return feeRecipients;
     }
 
     // ignore unused tokenId
@@ -780,15 +780,26 @@ contract CreatorBlueprints is
         override
         returns (uint32[] memory)
     {
-        if (blueprint.feeRecipientInfo.secondaryFeeBPS.length == 0) {
-            uint32[] memory feeBPS = new uint32[](2);
-            feeBPS[0] = defaultPlatformSecondarySalePercentage;
-            feeBPS[1] = defaultBlueprintSecondarySalePercentage;
+        uint32[] memory feeBps = new uint32[](1);
+        feeBps[0] = royaltyParameters.royaltyCutBPS;
+        return feeBps;
+    }
 
-            return feeBPS;
-        } else {
-            return blueprint.feeRecipientInfo.secondaryFeeBPS;
-        }
+    // ERC-2981, ignore token id
+    function royaltyInfo(
+        uint256 _tokenId,
+        uint256 _salePrice
+    ) external view returns (
+        address receiver,
+        uint256 royaltyAmount
+    ) {
+        receiver = royaltyParameters.split;
+        royaltyAmount = _salePrice * royaltyParameters.royaltyCutBPS / 10000;
+    }
+
+    // used for interoperability purposes 
+    function owner() public view virtual returns (address) {
+        return platform;
     }
 
     ////////////////////////////////////

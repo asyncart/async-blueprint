@@ -3,6 +3,7 @@ pragma solidity 0.8.4;
 
 import "../CreatorBlueprints.sol"; 
 import "../BlueprintV12.sol"; 
+import "../royalties/interfaces/ISplitMain.sol";
 
 import "@openzeppelin/contracts/proxy/beacon/UpgradeableBeacon.sol"; 
 import "@openzeppelin/contracts/proxy/beacon/IBeacon.sol"; 
@@ -24,13 +25,16 @@ contract BlueprintsFactory {
 
     address public immutable beacon; 
 
+    address private immutable _splitMain;
+
     constructor(
         address beaconUpgrader, 
         address globalBlueprintsUpgraderAdmin,
         string memory globalBlueprintsName,
         string memory globalBlueprintsSymbol,
         address globalBlueprintsMinter,
-        address _platform 
+        address _platform,
+        address splitMain
     ) {
         // deploy CreatorBlueprints implementation and beacon 
         address creatorBlueprintsImplementation = address(new CreatorBlueprints()); 
@@ -48,9 +52,11 @@ contract BlueprintsFactory {
                 globalBlueprintsName,
                 globalBlueprintsSymbol,
                 globalBlueprintsMinter,
-                msg.sender                
+                _platform           
             )
         ));
+
+        _splitMain = splitMain; 
 
         emit FactoryDeployed(
             creatorBlueprintsImplementation, 
@@ -61,55 +67,61 @@ contract BlueprintsFactory {
     }
 
     function deployCreatorBlueprints(
-        address split,
-        string memory name_,
-        string memory symbol_,
-        address minter,
-        address _platform
+        CreatorBlueprints.CreatorBlueprintsInput calldata creatorBlueprintsInput,
+        uint32 royaltyCutBPS,
+        address split
     ) external {
         _deployCreatorBlueprints(
-            split,
-            name_,
-            symbol_,
-            minter,
-            _platform
+            creatorBlueprintsInput,
+            royaltyCutBPS,
+            split
         );
     }
 
     function deployCreatorBlueprintsAndRoyaltySplitter(
-        string memory name_,
-        string memory symbol_,
-        address minter,
-        address _platform
+        CreatorBlueprints.CreatorBlueprintsInput calldata creatorBlueprintsInput,
+        uint32 royaltyCutBPS,
+        address[] calldata blueprintsRoyaltiesAccounts,
+        uint32[] calldata blueprintsRoyaltiesPercentAllocations
     ) external {
-        address split = address(0); // TODO: Deploy royalty splitter contract, placeholder for now
+        address split = ISplitMain(_splitMain).createSplit(
+            blueprintsRoyaltiesAccounts, 
+            blueprintsRoyaltiesPercentAllocations, 
+            0, 
+            creatorBlueprintsInput.platform
+        );
 
         _deployCreatorBlueprints(
-            split, 
-            name_,
-            symbol_,
-            minter,
-            _platform
+            creatorBlueprintsInput, 
+            royaltyCutBPS,
+            split
+        );
+    }
+
+    function predictBlueprintsRoyaltiesSplitAddress(
+        address[] calldata blueprintsRoyaltiesAccounts,
+        uint32[] calldata blueprintsRoyaltiesPercentAllocations
+    ) external view {
+        ISplitMain(_splitMain).predictImmutableSplitAddress(
+            blueprintsRoyaltiesAccounts, 
+            blueprintsRoyaltiesPercentAllocations, 
+            0
         );
     }
 
     function _deployCreatorBlueprints(
-        address split,
-        string memory name_,
-        string memory symbol_,
-        address minter,
-        address _platform
+        CreatorBlueprints.CreatorBlueprintsInput calldata creatorBlueprintsInput, 
+        uint32 royaltyCutBPS,
+        address split
     ) private {
-        // TODO: Create parameter for royalty split in CreatorBlueprints.initialize, pass in split
+        CreatorBlueprints.RoyaltyParameters memory royaltyParameters = CreatorBlueprints.RoyaltyParameters(split, royaltyCutBPS);
 
         address creatorBlueprint = address(new BeaconProxy(
             beacon,
             abi.encodeWithSelector(
                 CreatorBlueprints(address(0)).initialize.selector, 
-                name_,
-                symbol_,
-                minter,
-                _platform
+                creatorBlueprintsInput,
+                royaltyParameters
             )
         ));
 
