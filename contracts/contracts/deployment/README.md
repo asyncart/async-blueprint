@@ -29,3 +29,7 @@ Async should use `predictBlueprintsRoyaltiesSplitAddress` to predict the split a
 ### System smart contracts 
 
 When the factory is deployed, it also deploys the `CreatorBlueprints` implementation, it's beacon, the global `BlueprintsV12` implementation, and it's proxy. These 4 smart contracts encapsulate Async's Blueprints ecosystem, meaning only the factory deployment is required to get started. 
+
+### Default platform address 
+
+The factory contains default platform and minter addresses, which are passed in on each `CreatorBlueprints` deployment. These can be changed by the owner of the factory contract. They are initially set in the `initalize` of the factory. When you do want to change either one or both, (eg. one of them is compromised), call `changeDefaultCreatorBlueprintsAdmins`.

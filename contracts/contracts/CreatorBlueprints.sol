@@ -22,6 +22,7 @@ contract CreatorBlueprints is
     address public asyncSaleFeesRecipient;
     address public platform;
     address public minterAddress;
+    address public artist;
     
     mapping(address => uint256) failedTransferCredits;
     Blueprints public blueprint;
@@ -57,7 +58,6 @@ contract CreatorBlueprints is
         uint128 saleEndTimestamp;
         uint128 price;
         bool tokenUriLocked;        
-        address artist;
         address ERC20Token;
         string baseTokenUri;
         bytes32 merkleroot;
@@ -69,8 +69,13 @@ contract CreatorBlueprints is
         string name;
         string symbol;
         string contractURI;
-        address minter;
+        address artist;
+    }
+
+    struct CreatorBlueprintsAdmins {
         address platform;
+        address minter;
+        address asyncSaleFeesRecipient;
     }
 
     event BlueprintSeed(string randomSeed);
@@ -165,6 +170,7 @@ contract CreatorBlueprints is
     ///
     function initialize(
         CreatorBlueprintsInput calldata creatorBlueprintsInput,
+        CreatorBlueprintsAdmins calldata creatorBlueprintsAdmins,
         RoyaltyParameters calldata _royaltyParameters
     ) public initializer validRoyaltyParameters(_royaltyParameters) {
         // Intialize parent contracts
@@ -172,15 +178,16 @@ contract CreatorBlueprints is
         HasSecondarySaleFees._initialize();
         AccessControlUpgradeable.__AccessControl_init();
 
-        _setupRole(DEFAULT_ADMIN_ROLE, creatorBlueprintsInput.platform);
-        _setupRole(MINTER_ROLE, creatorBlueprintsInput.minter);
+        _setupRole(DEFAULT_ADMIN_ROLE, creatorBlueprintsAdmins.platform);
+        _setupRole(MINTER_ROLE, creatorBlueprintsAdmins.minter);
 
-        platform = creatorBlueprintsInput.platform;
-        minterAddress = creatorBlueprintsInput.minter;
+        platform = creatorBlueprintsAdmins.platform;
+        minterAddress = creatorBlueprintsAdmins.minter;
+        artist = creatorBlueprintsInput.artist;
 
         defaultPlatformPrimaryFeePercentage = 2000; // 20%
 
-        asyncSaleFeesRecipient = creatorBlueprintsInput.platform;
+        asyncSaleFeesRecipient = creatorBlueprintsAdmins.asyncSaleFeesRecipient;
         contractURI = creatorBlueprintsInput.contractURI; 
         royaltyParameters = _royaltyParameters;
     }
@@ -235,7 +242,7 @@ contract CreatorBlueprints is
         latestErc721TokenIndex += _capacity;
 
         emit BlueprintPrepared(
-            blueprint.artist,
+            artist,
             _capacity,
             _blueprintMetaData,
             blueprint.baseTokenUri
@@ -280,7 +287,6 @@ contract CreatorBlueprints is
     }
 
     function prepareBlueprint(
-        address _artist,
         uint64 _capacity,
         uint128 _price,
         address _erc20Token,
@@ -295,7 +301,6 @@ contract CreatorBlueprints is
     )   external 
         onlyRole(MINTER_ROLE)
     {
-        blueprint.artist = _artist;
         blueprint.capacity = _capacity;
         blueprint.price = _price;
 
@@ -316,7 +321,7 @@ contract CreatorBlueprints is
     function updateBlueprintArtist (
         address _newArtist
     ) external onlyRole(MINTER_ROLE) {
-        blueprint.artist = _newArtist;
+        artist = _newArtist;
     }
 
     function updateBlueprintCapacity (
@@ -405,7 +410,6 @@ contract CreatorBlueprints is
             "cannot buy > maxPurchaseAmount in one tx"
         );
 
-        address artist = blueprint.artist;
         _confirmPaymentAmountAndSettleSale(
             purchaseQuantity,
             tokenAmount,
@@ -434,7 +438,6 @@ contract CreatorBlueprints is
             "cannot buy > maxPurchaseAmount in one tx"
         );
 
-        address artist = blueprint.artist;
         _confirmPaymentAmountAndSettleSale(
             purchaseQuantity,
             tokenAmount,
@@ -451,13 +454,14 @@ contract CreatorBlueprints is
         external
         nonReentrant 
     {
+        address _artist = artist; // cache
         require(
             _isBlueprintPreparedAndNotStarted() || _isSaleOngoing(),
             "Must be presale or public sale"
         );
         require(
             minterAddress == msg.sender ||
-                blueprint.artist == msg.sender,
+                _artist == msg.sender,
             "user cannot mint presale"
         );
 
@@ -467,7 +471,7 @@ contract CreatorBlueprints is
                 "cannot mint quantity"
             );
             blueprint.mintAmountPlatform -= quantity;
-        } else if (blueprint.artist == msg.sender) {
+        } else if (_artist == msg.sender) {
             require(
                 quantity <= blueprint.mintAmountArtist,
                 "cannot mint quantity"
@@ -497,7 +501,7 @@ contract CreatorBlueprints is
                 )
             );
             emit BlueprintMinted(
-                blueprint.artist,
+                artist,
                 _nftRecipient,
                 newTokenId + i,
                 newCap,

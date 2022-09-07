@@ -10,7 +10,7 @@ import "@openzeppelin/contracts/proxy/beacon/IBeacon.sol";
 import "@openzeppelin/contracts/proxy/beacon/BeaconProxy.sol";
 import "@openzeppelin/contracts/proxy/transparent/TransparentUpgradeableProxy.sol";
 
-contract BlueprintsFactory { 
+contract BlueprintsFactory is Ownable { 
     event FactoryDeployed(
         address creatorBlueprintsImplementation, 
         address beacon,
@@ -27,14 +27,18 @@ contract BlueprintsFactory {
 
     address private immutable _splitMain;
 
+    CreatorBlueprints.CreatorBlueprintsAdmins public defaultCreatorBlueprintsAdmins;
+
     constructor(
         address beaconUpgrader, 
         address globalBlueprintsUpgraderAdmin,
         string memory globalBlueprintsName,
         string memory globalBlueprintsSymbol,
         address globalBlueprintsMinter,
+        address creatorBlueprintsMinter,
         address _platform,
-        address splitMain
+        address splitMain,
+        address factoryOwner
     ) {
         // deploy CreatorBlueprints implementation and beacon 
         address creatorBlueprintsImplementation = address(new CreatorBlueprints()); 
@@ -57,6 +61,9 @@ contract BlueprintsFactory {
         ));
 
         _splitMain = splitMain; 
+        defaultCreatorBlueprintsAdmins = CreatorBlueprints.CreatorBlueprintsAdmins(_platform, _platform, creatorBlueprintsMinter);
+
+        _transferOwnership(factoryOwner);
 
         emit FactoryDeployed(
             creatorBlueprintsImplementation, 
@@ -80,15 +87,13 @@ contract BlueprintsFactory {
 
     function deployCreatorBlueprintsAndRoyaltySplitter(
         CreatorBlueprints.CreatorBlueprintsInput calldata creatorBlueprintsInput,
-        uint32 royaltyCutBPS,
-        address[] calldata blueprintsRoyaltiesAccounts,
-        uint32[] calldata blueprintsRoyaltiesPercentAllocations
+        uint32 royaltyCutBPS
     ) external {
         address split = ISplitMain(_splitMain).createSplit(
-            blueprintsRoyaltiesAccounts, 
-            blueprintsRoyaltiesPercentAllocations, 
+            _defaultRoyaltiesAccounts(creatorBlueprintsInput.artist), 
+            _defaultRoyaltiesPercentAllocations(), 
             0, 
-            creatorBlueprintsInput.platform
+            defaultCreatorBlueprintsAdmins.platform
         );
 
         _deployCreatorBlueprints(
@@ -99,12 +104,11 @@ contract BlueprintsFactory {
     }
 
     function predictBlueprintsRoyaltiesSplitAddress(
-        address[] calldata blueprintsRoyaltiesAccounts,
-        uint32[] calldata blueprintsRoyaltiesPercentAllocations
+        address _artist
     ) external view {
         ISplitMain(_splitMain).predictImmutableSplitAddress(
-            blueprintsRoyaltiesAccounts, 
-            blueprintsRoyaltiesPercentAllocations, 
+            _defaultRoyaltiesAccounts(_artist), 
+            _defaultRoyaltiesPercentAllocations(), 
             0
         );
     }
@@ -121,6 +125,7 @@ contract BlueprintsFactory {
             abi.encodeWithSelector(
                 CreatorBlueprints(address(0)).initialize.selector, 
                 creatorBlueprintsInput,
+                defaultCreatorBlueprintsAdmins,
                 royaltyParameters
             )
         ));
@@ -129,5 +134,31 @@ contract BlueprintsFactory {
             creatorBlueprint,
             split
         ); 
+    }
+
+    function _defaultRoyaltiesAccounts(address _artist) internal view returns(address[] memory) {
+        address[] memory _recipients = new address[](2);
+        _recipients[0] = defaultCreatorBlueprintsAdmins.asyncSaleFeesRecipient; 
+        _recipients[1] = _artist;
+        return _recipients;
+    }
+
+    function _defaultRoyaltiesPercentAllocations() internal pure returns(uint32[] memory) {
+        uint32[] memory _allocations = new uint32[](2); 
+        _allocations[0] = 250000; // 75%
+        _allocations[1] = 750000; // 25% 
+        return _allocations;
+    }
+
+    function changeDefaultCreatorBlueprintsAdmins(
+        CreatorBlueprints.CreatorBlueprintsAdmins calldata _newDefaultCreatorBlueprintsAdmins
+    ) external onlyOwner {
+        require(
+            _newDefaultCreatorBlueprintsAdmins.platform != address(0) && 
+            _newDefaultCreatorBlueprintsAdmins.asyncSaleFeesRecipient != address(0) && 
+            _newDefaultCreatorBlueprintsAdmins.minter != address(0), 
+            "Invalid address"
+        );
+        defaultCreatorBlueprintsAdmins = _newDefaultCreatorBlueprintsAdmins;
     }
 }
