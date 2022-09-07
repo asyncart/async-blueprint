@@ -55,7 +55,7 @@ describe("Prepare Blueprint", function () {
 
       Blueprint = await ethers.getContractFactory("BlueprintV12");
       blueprint = await Blueprint.deploy();
-      blueprint.initialize("Async Blueprint", "ABP", ContractOwner.address);
+      blueprint.initialize("Async Blueprint", "ABP", ContractOwner.address, ContractOwner.address);
     });
     it("1: should prepare the blueprint", async function () {
       await blueprint
@@ -172,7 +172,7 @@ describe("Prepare Blueprint", function () {
         blueprint
           .connect(ContractOwner)
           .setFeeRecipients(0, { ...feeRecipients, primaryFeeRecipients: misFeeRecips })
-      ).to.be.revertedWith("mismatched recipients & Bps");
+      ).to.be.revertedWith("fee data invalid");
     });
     it("should not allow fee bps to exceed 10000", async function () {
       let mismatchBps = [5000, 6000];
@@ -196,12 +196,12 @@ describe("Prepare Blueprint", function () {
         blueprint
           .connect(ContractOwner)
           .setFeeRecipients(0, { ...feeRecipients, primaryFeeBPS: mismatchBps })
-      ).to.be.revertedWith("Fee Bps > maximum");
+      ).to.be.revertedWith("fee bps too big");
     });
     it("should not allow sale for unprepared blueprint", async function () {
       await expect(
         blueprint.connect(ContractOwner).beginSale(0)
-      ).to.be.revertedWith("sale started or not prepared");
+      ).to.be.revertedWith("wrong sale state");
     });
   });
 });

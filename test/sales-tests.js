@@ -61,7 +61,7 @@ describe("Blueprint Sales", function () {
 
       Blueprint = await ethers.getContractFactory("BlueprintV12");
       blueprint = await Blueprint.deploy();
-      blueprint.initialize("Async Blueprint", "ABP", ContractOwner.address);
+      blueprint.initialize("Async Blueprint", "ABP", ContractOwner.address, ContractOwner.address);
       await blueprint
         .connect(ContractOwner)
         .prepareBlueprint(
@@ -96,7 +96,7 @@ describe("Blueprint Sales", function () {
       expect(result.saleState.toString()).to.be.equal(sale_paused);
       await expect(
         blueprint.connect(ContractOwner).pauseSale(0)
-      ).to.be.revertedWith("Sale not ongoing");
+      ).to.be.revertedWith("Not ongoing");
     });
     it("3: should allow for unpausing of paused sale", async function () {
       await blueprint.connect(ContractOwner).pauseSale(0);
@@ -126,7 +126,7 @@ describe("Blueprint Sales", function () {
         );
       await expect(
         blueprint.connect(ContractOwner).pauseSale(1)
-      ).to.be.revertedWith("Sale not ongoing");
+      ).to.be.revertedWith("Not ongoing");
     });
     it("5: should allow users to purchase blueprints", async function () {
       let blueprintValue = BigNumber.from(tenPieces).mul(oneEth);
@@ -151,7 +151,7 @@ describe("Blueprint Sales", function () {
         blueprint
           .connect(user2)
           .purchaseBlueprints(0, tenPieces, tenPieces, 0, [], { value: blueprintValue })
-      ).to.be.revertedWith("not available to purchase");
+      ).to.be.revertedWith("purchase unavailable");
     });
     describe("B: Sale + purchase interactions", function () {
       it("1: should distribute fees", async function () {
@@ -178,7 +178,7 @@ describe("Blueprint Sales", function () {
           blueprint
             .connect(user2)
             .purchaseBlueprints(0, tenPieces, tenPieces, 10, [], { value: blueprintValue })
-        ).to.be.revertedWith("cannot specify token amount");
+        ).to.be.revertedWith("tokenAmount not zero");
       });
       it("3: should not allow purchase of more than capacity", async function () {
         let fiveHundredPieces = BigNumber.from(oneThousandPieces).div(2);
@@ -200,7 +200,7 @@ describe("Blueprint Sales", function () {
               [],
               { value: fiveHundredEth.add(oneEth) }
             )
-        ).to.be.revertedWith("quantity exceeds capacity");
+        ).to.be.revertedWith("quantity too big");
       });
       it("5: should default fees if none provided", async function () {
         await blueprint
@@ -266,7 +266,7 @@ describe("Blueprint Sales", function () {
 
       Blueprint = await ethers.getContractFactory("BlueprintV12");
       blueprint = await Blueprint.deploy();
-      blueprint.initialize("Async Blueprint", "ABP", ContractOwner.address);
+      blueprint.initialize("Async Blueprint", "ABP", ContractOwner.address, ContractOwner.address);
       const latestBlock = await ethers.provider.getBlockNumber();
       const latestBlocktimestamp = (await ethers.provider.getBlock(latestBlock)).timestamp
       const nextBlockTimestamp = latestBlocktimestamp + 15
@@ -314,7 +314,7 @@ describe("Blueprint Sales", function () {
         blueprint
           .connect(user2)
           .purchaseBlueprints(0, tenPieces, tenPieces, 0, [], { value: BigNumber.from(tenPieces).mul(oneEth) })
-      ).to.be.revertedWith("not available to purchase");
+      ).to.be.revertedWith("purchase unavailable");
     });
     // TODO: consider a test that shows you can't pause a sale who's end timestamp has passed...but maybe we don't want this if we want the minter to be able
     //       to pause a sale then extend the timestamp/adjust settings and then unpause. Note tho this can be done using updateBlueprintSettings as is
