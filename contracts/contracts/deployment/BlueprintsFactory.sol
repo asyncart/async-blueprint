@@ -81,7 +81,8 @@ contract BlueprintsFactory is Ownable {
         _deployCreatorBlueprints(
             creatorBlueprintsInput,
             royaltyCutBPS,
-            split
+            split,
+            false
         );
     }
 
@@ -93,14 +94,59 @@ contract BlueprintsFactory is Ownable {
             _defaultRoyaltiesAccounts(creatorBlueprintsInput.artist), 
             _defaultRoyaltiesPercentAllocations(), 
             0, 
-            defaultCreatorBlueprintsAdmins.platform
+            address(0)
         );
 
         _deployCreatorBlueprints(
             creatorBlueprintsInput, 
             royaltyCutBPS,
-            split
+            split,
+            false
         );
+    }
+
+    function deployAndPrepareCreatorBlueprints(
+        CreatorBlueprints.CreatorBlueprintsInput calldata creatorBlueprintsInput,
+        CreatorBlueprints.BlueprintPreparationConfig calldata blueprintPreparationConfig,
+        uint32 royaltyCutBPS,
+        address split
+    ) external {
+        address blueprintContract = _deployCreatorBlueprints(
+            creatorBlueprintsInput,
+            royaltyCutBPS,
+            split,
+            true
+        );
+
+        CreatorBlueprints(blueprintContract).prepareBlueprint(blueprintPreparationConfig);
+
+        // give minter role to actual minter 
+        CreatorBlueprints(blueprintContract).updateMinterAddress(defaultCreatorBlueprintsAdmins.minter);
+    }
+
+    function deployRoyaltySplitterAndPrepareCreatorBlueprints(
+        CreatorBlueprints.CreatorBlueprintsInput calldata creatorBlueprintsInput,
+        CreatorBlueprints.BlueprintPreparationConfig calldata blueprintPreparationConfig,
+        uint32 royaltyCutBPS
+    ) external {
+        address split = ISplitMain(_splitMain).createSplit(
+            _defaultRoyaltiesAccounts(creatorBlueprintsInput.artist), 
+            _defaultRoyaltiesPercentAllocations(), 
+            0, 
+            address(0)
+        );
+
+        address blueprintContract = _deployCreatorBlueprints(
+            creatorBlueprintsInput, 
+            royaltyCutBPS,
+            split,
+            true
+        );
+
+        CreatorBlueprints(blueprintContract).prepareBlueprint(blueprintPreparationConfig);
+
+        // give minter role to actual minter 
+        CreatorBlueprints(blueprintContract).updateMinterAddress(defaultCreatorBlueprintsAdmins.minter);
     }
 
     function predictBlueprintsRoyaltiesSplitAddress(
@@ -116,16 +162,21 @@ contract BlueprintsFactory is Ownable {
     function _deployCreatorBlueprints(
         CreatorBlueprints.CreatorBlueprintsInput calldata creatorBlueprintsInput, 
         uint32 royaltyCutBPS,
-        address split
-    ) private {
+        address split,
+        bool setTemporaryMinter // if true, set factory contract as temporary minter to prepare blueprint right after
+    ) private returns (address) {
         CreatorBlueprints.RoyaltyParameters memory royaltyParameters = CreatorBlueprints.RoyaltyParameters(split, royaltyCutBPS);
+        CreatorBlueprints.CreatorBlueprintsAdmins memory blueprintAdmins = defaultCreatorBlueprintsAdmins;
+        if (setTemporaryMinter) {
+            blueprintAdmins.minter = address(this);
+        }
 
         address creatorBlueprint = address(new BeaconProxy(
             beacon,
             abi.encodeWithSelector(
                 CreatorBlueprints(address(0)).initialize.selector, 
                 creatorBlueprintsInput,
-                defaultCreatorBlueprintsAdmins,
+                blueprintAdmins,
                 royaltyParameters
             )
         ));
@@ -134,6 +185,8 @@ contract BlueprintsFactory is Ownable {
             creatorBlueprint,
             split
         ); 
+
+        return creatorBlueprint;
     }
 
     function _defaultRoyaltiesAccounts(address _artist) internal view returns(address[] memory) {

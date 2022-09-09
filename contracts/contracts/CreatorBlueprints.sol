@@ -65,6 +65,19 @@ contract CreatorBlueprints is
         Fees feeRecipientInfo;
     }
 
+    struct BlueprintPreparationConfig {
+        uint64 _capacity;
+        uint128 _price;
+        address _erc20Token;
+        string _blueprintMetaData;
+        string _baseTokenUri;
+        bytes32 _merkleroot;
+        uint32 _mintAmountArtist;
+        uint32 _mintAmountPlatform;
+        uint64 _maxPurchaseAmount;
+        uint128 _saleEndTimestamp;
+        Fees _feeRecipientInfo; 
+    }
     struct CreatorBlueprintsInput {
         string name;
         string symbol;
@@ -287,35 +300,25 @@ contract CreatorBlueprints is
     }
 
     function prepareBlueprint(
-        uint64 _capacity,
-        uint128 _price,
-        address _erc20Token,
-        string memory _blueprintMetaData,
-        string memory _baseTokenUri,
-        bytes32 _merkleroot,
-        uint32 _mintAmountArtist,
-        uint32 _mintAmountPlatform,
-        uint64 _maxPurchaseAmount,
-        uint128 _saleEndTimestamp,
-        Fees memory _feeRecipientInfo
+        BlueprintPreparationConfig calldata config
     )   external 
         onlyRole(MINTER_ROLE)
     {
-        blueprint.capacity = _capacity;
-        blueprint.price = _price;
+        blueprint.capacity = config._capacity;
+        blueprint.price = config._price;
 
         _setupBlueprint(
-            _erc20Token,
-            _baseTokenUri,
-            _merkleroot,
-            _mintAmountArtist,
-            _mintAmountPlatform,
-            _maxPurchaseAmount,
-            _saleEndTimestamp
+            config._erc20Token,
+            config._baseTokenUri,
+            config._merkleroot,
+            config._mintAmountArtist,
+            config._mintAmountPlatform,
+            config._maxPurchaseAmount,
+            config._saleEndTimestamp
         );
 
-        setBlueprintPrepared(_blueprintMetaData);
-        setFeeRecipients(_feeRecipientInfo);
+        setBlueprintPrepared(config._blueprintMetaData);
+        setFeeRecipients(config._feeRecipientInfo);
     }
 
     function updateBlueprintArtist (
