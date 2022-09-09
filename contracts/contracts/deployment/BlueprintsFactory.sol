@@ -56,7 +56,8 @@ contract BlueprintsFactory is Ownable {
                 globalBlueprintsName,
                 globalBlueprintsSymbol,
                 globalBlueprintsMinter,
-                _platform           
+                _platform,
+                splitMain           
             )
         ));
 
