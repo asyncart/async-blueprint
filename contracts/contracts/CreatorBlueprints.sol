@@ -17,16 +17,18 @@ contract CreatorBlueprints is
     using StringsUpgradeable for uint256;
 
     uint32 public defaultPlatformPrimaryFeePercentage;    
-    uint32 public defaultBlueprintSecondarySalePercentage;
-    uint32 public defaultPlatformSecondarySalePercentage;
     uint64 public latestErc721TokenIndex;
 
     address public asyncSaleFeesRecipient;
     address public platform;
     address public minterAddress;
+    address public artist;
     
     mapping(address => uint256) failedTransferCredits;
     Blueprints public blueprint;
+    RoyaltyParameters public royaltyParameters;
+
+    string public contractURI; 
 
     bytes32 public constant MINTER_ROLE = keccak256("MINTER_ROLE");
 
@@ -39,9 +41,12 @@ contract CreatorBlueprints is
 
     struct Fees {
         uint32[] primaryFeeBPS;
-        uint32[] secondaryFeeBPS;
         address[] primaryFeeRecipients;
-        address[] secondaryFeeRecipients;
+    }
+
+    struct RoyaltyParameters {
+        address split;
+        uint32 royaltyCutBPS;
     }
 
     struct Blueprints {
@@ -53,12 +58,37 @@ contract CreatorBlueprints is
         uint128 saleEndTimestamp;
         uint128 price;
         bool tokenUriLocked;        
-        address artist;
         address ERC20Token;
         string baseTokenUri;
         bytes32 merkleroot;
         SaleState saleState;    
         Fees feeRecipientInfo;
+    }
+
+    struct BlueprintPreparationConfig {
+        uint64 _capacity;
+        uint128 _price;
+        address _erc20Token;
+        string _blueprintMetaData;
+        string _baseTokenUri;
+        bytes32 _merkleroot;
+        uint32 _mintAmountArtist;
+        uint32 _mintAmountPlatform;
+        uint64 _maxPurchaseAmount;
+        uint128 _saleEndTimestamp;
+        Fees _feeRecipientInfo; 
+    }
+    struct CreatorBlueprintsInput {
+        string name;
+        string symbol;
+        string contractURI;
+        address artist;
+    }
+
+    struct CreatorBlueprintsAdmins {
+        address platform;
+        address minter;
+        address asyncSaleFeesRecipient;
     }
 
     event BlueprintSeed(string randomSeed);
@@ -140,32 +170,43 @@ contract CreatorBlueprints is
         _;
     }
 
+    // allow 0 values for cut and split address  
+    modifier validRoyaltyParameters(
+        RoyaltyParameters calldata _royaltyParameters
+    ) {
+        require(_royaltyParameters.royaltyCutBPS <= 10000);
+        _;
+    }
+
     ///
     ///Initialize the implementation
     ///
     function initialize(
-        string memory name_,
-        string memory symbol_,
-        address minter,
-        address _platform
-    ) public initializer {
+        CreatorBlueprintsInput calldata creatorBlueprintsInput,
+        CreatorBlueprintsAdmins calldata creatorBlueprintsAdmins,
+        RoyaltyParameters calldata _royaltyParameters,
+        address extraMinter
+    ) public initializer validRoyaltyParameters(_royaltyParameters) {
         // Intialize parent contracts
-        ERC721Upgradeable.__ERC721_init(name_, symbol_);
+        ERC721Upgradeable.__ERC721_init(creatorBlueprintsInput.name, creatorBlueprintsInput.symbol);
         HasSecondarySaleFees._initialize();
         AccessControlUpgradeable.__AccessControl_init();
 
-        _setupRole(DEFAULT_ADMIN_ROLE, _platform);
-        _setupRole(MINTER_ROLE, minter);
+        _setupRole(DEFAULT_ADMIN_ROLE, creatorBlueprintsAdmins.platform);
+        _setupRole(MINTER_ROLE, creatorBlueprintsAdmins.minter);
+        if (extraMinter != address(0)) {
+            _setupRole(MINTER_ROLE, extraMinter);
+        }
 
-        platform = _platform;
-        minterAddress = minter;
+        platform = creatorBlueprintsAdmins.platform;
+        minterAddress = creatorBlueprintsAdmins.minter;
+        artist = creatorBlueprintsInput.artist;
 
         defaultPlatformPrimaryFeePercentage = 2000; // 20%
 
-        defaultBlueprintSecondarySalePercentage = 750; // 7.5%
-        defaultPlatformSecondarySalePercentage = 250; // 2.5%
-
-        asyncSaleFeesRecipient = _platform;
+        asyncSaleFeesRecipient = creatorBlueprintsAdmins.asyncSaleFeesRecipient;
+        contractURI = creatorBlueprintsInput.contractURI; 
+        royaltyParameters = _royaltyParameters;
     }
 
     function _isSaleOngoing()
@@ -218,7 +259,7 @@ contract CreatorBlueprints is
         latestErc721TokenIndex += _capacity;
 
         emit BlueprintPrepared(
-            blueprint.artist,
+            artist,
             _capacity,
             _blueprintMetaData,
             blueprint.baseTokenUri
@@ -263,43 +304,31 @@ contract CreatorBlueprints is
     }
 
     function prepareBlueprint(
-        address _artist,
-        uint64 _capacity,
-        uint128 _price,
-        address _erc20Token,
-        string memory _blueprintMetaData,
-        string memory _baseTokenUri,
-        bytes32 _merkleroot,
-        uint32 _mintAmountArtist,
-        uint32 _mintAmountPlatform,
-        uint64 _maxPurchaseAmount,
-        uint128 _saleEndTimestamp,
-        Fees memory _feeRecipientInfo
+        BlueprintPreparationConfig calldata config
     )   external 
         onlyRole(MINTER_ROLE)
     {
-        blueprint.artist = _artist;
-        blueprint.capacity = _capacity;
-        blueprint.price = _price;
+        blueprint.capacity = config._capacity;
+        blueprint.price = config._price;
 
         _setupBlueprint(
-            _erc20Token,
-            _baseTokenUri,
-            _merkleroot,
-            _mintAmountArtist,
-            _mintAmountPlatform,
-            _maxPurchaseAmount,
-            _saleEndTimestamp
+            config._erc20Token,
+            config._baseTokenUri,
+            config._merkleroot,
+            config._mintAmountArtist,
+            config._mintAmountPlatform,
+            config._maxPurchaseAmount,
+            config._saleEndTimestamp
         );
 
-        setBlueprintPrepared(_blueprintMetaData);
-        setFeeRecipients(_feeRecipientInfo);
+        setBlueprintPrepared(config._blueprintMetaData);
+        setFeeRecipients(config._feeRecipientInfo);
     }
 
     function updateBlueprintArtist (
         address _newArtist
     ) external onlyRole(MINTER_ROLE) {
-        blueprint.artist = _newArtist;
+        artist = _newArtist;
     }
 
     function updateBlueprintCapacity (
@@ -320,8 +349,7 @@ contract CreatorBlueprints is
             blueprint.saleState != SaleState.not_prepared,
             "never prepared"
         );
-        if (feeArrayDataValid(_feeRecipientInfo.primaryFeeRecipients, _feeRecipientInfo.primaryFeeBPS) && 
-                feeArrayDataValid(_feeRecipientInfo.secondaryFeeRecipients, _feeRecipientInfo.secondaryFeeBPS)) {
+        if (feeArrayDataValid(_feeRecipientInfo.primaryFeeRecipients, _feeRecipientInfo.primaryFeeBPS)) {
             blueprint.feeRecipientInfo = _feeRecipientInfo;
         }
     }
@@ -389,7 +417,6 @@ contract CreatorBlueprints is
             "cannot buy > maxPurchaseAmount in one tx"
         );
 
-        address artist = blueprint.artist;
         _confirmPaymentAmountAndSettleSale(
             purchaseQuantity,
             tokenAmount,
@@ -418,7 +445,6 @@ contract CreatorBlueprints is
             "cannot buy > maxPurchaseAmount in one tx"
         );
 
-        address artist = blueprint.artist;
         _confirmPaymentAmountAndSettleSale(
             purchaseQuantity,
             tokenAmount,
@@ -435,13 +461,14 @@ contract CreatorBlueprints is
         external
         nonReentrant 
     {
+        address _artist = artist; // cache
         require(
             _isBlueprintPreparedAndNotStarted() || _isSaleOngoing(),
             "Must be presale or public sale"
         );
         require(
             minterAddress == msg.sender ||
-                blueprint.artist == msg.sender,
+                _artist == msg.sender,
             "user cannot mint presale"
         );
 
@@ -451,7 +478,7 @@ contract CreatorBlueprints is
                 "cannot mint quantity"
             );
             blueprint.mintAmountPlatform -= quantity;
-        } else if (blueprint.artist == msg.sender) {
+        } else if (_artist == msg.sender) {
             require(
                 quantity <= blueprint.mintAmountArtist,
                 "cannot mint quantity"
@@ -481,7 +508,7 @@ contract CreatorBlueprints is
                 )
             );
             emit BlueprintMinted(
-                blueprint.artist,
+                artist,
                 _nftRecipient,
                 newTokenId + i,
                 newCap,
@@ -629,22 +656,12 @@ contract CreatorBlueprints is
         defaultPlatformPrimaryFeePercentage = _basisPoints;
     }
 
-    function changeDefaultBlueprintSecondarySalePercentage(uint32 _basisPoints)
+    function updateRoyaltyParameters(RoyaltyParameters calldata _royaltyParameters) 
         external
         onlyRole(DEFAULT_ADMIN_ROLE)
+        validRoyaltyParameters(_royaltyParameters)
     {
-        require(_basisPoints + defaultPlatformSecondarySalePercentage <= 10000);
-        defaultBlueprintSecondarySalePercentage = _basisPoints;
-    }
-
-    function changeDefaultPlatformSecondarySalePercentage(uint32 _basisPoints)
-        external
-        onlyRole(DEFAULT_ADMIN_ROLE)
-    {
-        require(
-            _basisPoints + defaultBlueprintSecondarySalePercentage <= 10000
-        );
-        defaultPlatformSecondarySalePercentage = _basisPoints;
+        royaltyParameters = _royaltyParameters; 
     }
 
     function updatePlatformAddress(address _platform)
@@ -762,15 +779,9 @@ contract CreatorBlueprints is
         override
         returns (address[] memory)
     {
-        if (blueprint.feeRecipientInfo.secondaryFeeRecipients.length == 0) {
-            address[] memory feeRecipients = new address[](2);
-            feeRecipients[0] = (asyncSaleFeesRecipient);
-            feeRecipients[1] = (blueprint.artist);
-
-            return feeRecipients;
-        } else {
-            return blueprint.feeRecipientInfo.secondaryFeeRecipients;
-        }
+        address[] memory feeRecipients = new address[](1);
+        feeRecipients[0] = royaltyParameters.split;
+        return feeRecipients;
     }
 
     // ignore unused tokenId
@@ -780,15 +791,26 @@ contract CreatorBlueprints is
         override
         returns (uint32[] memory)
     {
-        if (blueprint.feeRecipientInfo.secondaryFeeBPS.length == 0) {
-            uint32[] memory feeBPS = new uint32[](2);
-            feeBPS[0] = defaultPlatformSecondarySalePercentage;
-            feeBPS[1] = defaultBlueprintSecondarySalePercentage;
+        uint32[] memory feeBps = new uint32[](1);
+        feeBps[0] = royaltyParameters.royaltyCutBPS;
+        return feeBps;
+    }
 
-            return feeBPS;
-        } else {
-            return blueprint.feeRecipientInfo.secondaryFeeBPS;
-        }
+    // ERC-2981, ignore token id
+    function royaltyInfo(
+        uint256 _tokenId,
+        uint256 _salePrice
+    ) external view returns (
+        address receiver,
+        uint256 royaltyAmount
+    ) {
+        receiver = royaltyParameters.split;
+        royaltyAmount = _salePrice * royaltyParameters.royaltyCutBPS / 10000;
+    }
+
+    // used for interoperability purposes 
+    function owner() public view virtual returns (address) {
+        return platform;
     }
 
     ////////////////////////////////////

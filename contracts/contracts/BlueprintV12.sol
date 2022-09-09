@@ -2,6 +2,7 @@
 pragma solidity 0.8.4;
 
 import "./abstract/HasSecondarySaleFees.sol";
+import "./royalties/interfaces/ISplitMain.sol";
 import "@openzeppelin/contracts-upgradeable/token/ERC721/ERC721Upgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/access/AccessControlEnumerableUpgradeable.sol";
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
@@ -25,6 +26,8 @@ contract BlueprintV12 is
     address public asyncSaleFeesRecipient;
     address public platform;
     address public minterAddress;
+
+    address private _splitMain;
     
     mapping(uint256 => uint256) tokenToBlueprintID;
     mapping(address => uint256) failedTransferCredits;
@@ -39,11 +42,26 @@ contract BlueprintV12 is
         paused
     }
 
-    struct Fees {
+    struct SecondaryFeesInput {
+        address[] secondaryFeeRecipients; 
+        uint32[] secondaryFeeMPS; // where 100% = 1000000 as per SplitMain
+        uint32 totalRoyaltyCutBPS;
+        address royaltyRecipient; // if this is set, it is used as the de-facto alternative to secondaryFeeRecipients and secondaryFeeBPS
+    }
+
+    // used to bypass stack depth error
+    struct FeesInput {
         uint32[] primaryFeeBPS;
-        uint32[] secondaryFeeBPS;
         address[] primaryFeeRecipients;
-        address[] secondaryFeeRecipients;
+        SecondaryFeesInput secondaryFeesInput;
+        bool deploySplit; 
+    } 
+
+    struct Fees {
+        address[] primaryFeeRecipients;
+        uint32[] primaryFeeBPS;
+        address royaltyRecipient;
+        uint32 totalRoyaltyCutBPS;
     }
 
     struct Blueprints {
@@ -154,7 +172,8 @@ contract BlueprintV12 is
         string memory name_,
         string memory symbol_,
         address minter,
-        address _platform
+        address _platform,
+        address splitMain
     ) public initializer {
         // Intialize parent contracts
         ERC721Upgradeable.__ERC721_init(name_, symbol_);
@@ -173,6 +192,7 @@ contract BlueprintV12 is
         defaultPlatformSecondarySalePercentage = 250; // 2.5%
 
         asyncSaleFeesRecipient = _platform;
+        _splitMain = splitMain;
     }
 
     function _isSaleOngoing(uint256 _blueprintID)
@@ -285,7 +305,7 @@ contract BlueprintV12 is
         uint32 _mintAmountPlatform,
         uint64 _maxPurchaseAmount,
         uint128 _saleEndTimestamp,
-        Fees memory _feeRecipientInfo
+        FeesInput memory feesInput
     )   external 
         onlyRole(MINTER_ROLE)
     {
@@ -303,10 +323,10 @@ contract BlueprintV12 is
             _mintAmountPlatform,
             _maxPurchaseAmount,
             _saleEndTimestamp
-        );
+        ); 
 
         setBlueprintPrepared(_blueprintID, _blueprintMetaData);
-        setFeeRecipients(_blueprintID, _feeRecipientInfo);
+        setFeeRecipients(_blueprintID, feesInput);
     }
 
     function updateBlueprintArtist (
@@ -330,16 +350,37 @@ contract BlueprintV12 is
 
     function setFeeRecipients(
         uint256 _blueprintID,
-        Fees memory _feeRecipientInfo
+        FeesInput memory _feesInput
     ) public onlyRole(MINTER_ROLE) {
         require(
             blueprints[_blueprintID].saleState != SaleState.not_prepared,
             "never prepared"
         );
-        if (feeArrayDataValid(_feeRecipientInfo.primaryFeeRecipients, _feeRecipientInfo.primaryFeeBPS) && 
-                feeArrayDataValid(_feeRecipientInfo.secondaryFeeRecipients, _feeRecipientInfo.secondaryFeeBPS)) {
-            blueprints[_blueprintID].feeRecipientInfo = _feeRecipientInfo;
-        }
+        require(
+            feeArrayDataValid(_feesInput.primaryFeeRecipients, _feesInput.primaryFeeBPS),
+            "invalid primary data"
+        ); 
+
+        SecondaryFeesInput memory secondaryFeesInput = _feesInput.secondaryFeesInput;
+
+        Fees memory feeRecipientInfo = Fees(
+            _feesInput.primaryFeeRecipients,
+            _feesInput.primaryFeeBPS,
+            secondaryFeesInput.royaltyRecipient, 
+            secondaryFeesInput.totalRoyaltyCutBPS
+        );
+
+        // if pre-existing split isn't passed in, deploy it and set it. 
+        if (_feesInput.deploySplit) {
+            feeRecipientInfo.royaltyRecipient = ISplitMain(_splitMain).createSplit(
+                secondaryFeesInput.secondaryFeeRecipients, 
+                secondaryFeesInput.secondaryFeeMPS, 
+                0, 
+                address(0) // immutable split
+            );
+        } 
+        
+        blueprints[_blueprintID].feeRecipientInfo = feeRecipientInfo;
     }
 
     function beginSale(uint256 blueprintID)
@@ -790,15 +831,8 @@ contract BlueprintV12 is
         override
         returns (address[] memory)
     {
-        if (blueprints[tokenToBlueprintID[tokenId]].feeRecipientInfo.secondaryFeeRecipients.length == 0) {
-            address[] memory feeRecipients = new address[](2);
-            feeRecipients[0] = (asyncSaleFeesRecipient);
-            feeRecipients[1] = (blueprints[tokenToBlueprintID[tokenId]].artist);
-
-            return feeRecipients;
-        } else {
-            return blueprints[tokenToBlueprintID[tokenId]].feeRecipientInfo.secondaryFeeRecipients;
-        }
+        address[] memory feeRecipients = new address[](1);
+        feeRecipients[0] = blueprints[tokenToBlueprintID[tokenId]].feeRecipientInfo.royaltyRecipient;
     }
 
     function getFeeBps(uint256 tokenId)
@@ -807,15 +841,8 @@ contract BlueprintV12 is
         override
         returns (uint32[] memory)
     {
-        if (blueprints[tokenToBlueprintID[tokenId]].feeRecipientInfo.secondaryFeeBPS.length == 0) {
-            uint32[] memory feeBPS = new uint32[](2);
-            feeBPS[0] = defaultPlatformSecondarySalePercentage;
-            feeBPS[1] = defaultBlueprintSecondarySalePercentage;
-
-            return feeBPS;
-        } else {
-            return blueprints[tokenToBlueprintID[tokenId]].feeRecipientInfo.secondaryFeeBPS;
-        }
+        uint32[] memory feeBPS  = new uint32[](1);
+        feeBPS[0] = blueprints[tokenToBlueprintID[tokenId]].feeRecipientInfo.totalRoyaltyCutBPS;
     }
 
     ////////////////////////////////////

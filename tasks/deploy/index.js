@@ -1,0 +1,2 @@
+require("./blueprintsFactory");
+require("./splitMain");

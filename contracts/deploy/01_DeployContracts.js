@@ -1,20 +1,24 @@
-const { network } = require("hardhat");
+const hre = require("hardhat");
 
-module.exports = async ({ deployments }) => {
-  const { deploy } = deployments;
-  // const { deployer, admin } = await getNamedAccounts();
-  const accounts = await ethers.getSigners();
-  const deployer = accounts[0].address;
-  await deploy("Blueprint", {
-    from: deployer,
-    proxy: {
-      execute: {
-        proxyContract: "UUPSProxy",
-        methodName: "initialize",
-        args: ["Async Blueprint", "ABP"],
-      },
-    },
-    log: true,
-  });
-};
-module.exports.tags = ["all", "contracts"];
+async function main() {
+  const signers = await hre.ethers.getSigners()
+  const BlueprintsFactory = await hre.ethers.getContractFactory("BlueprintsFactory");
+  const blueprintsFactory = await BlueprintsFactory.deploy(
+    signers[0].address,
+    signers[0].address,
+    "name",
+    "symbol",
+    signers[0].address,
+    signers[0].address, 
+    signers[0].address,
+    signers[0].address,
+    signers[0].address
+  );
+
+  await blueprintsFactory.deployed();
+}
+
+main().catch((error) => {
+  console.error(error);
+  process.exitCode = 1;
+});

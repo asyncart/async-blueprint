@@ -14,6 +14,9 @@ const {
   coinmarketCapKey,
 } = require("./secretsManager.example.js");
 
+require("./tasks/deploy");
+require("./tasks/factory")
+
 module.exports = {
   solidity: {
     version: "0.8.4",
@@ -31,7 +34,7 @@ module.exports = {
     coinmarketcap: coinmarketCapKey,
   },
   paths: {
-    deploy: "./contracts/deploy",
+    // deploy: "./contracts/deploy",
     deployments: "deployments",
     imports: "imports",
     tests: "./test",
