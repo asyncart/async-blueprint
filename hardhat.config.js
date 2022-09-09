@@ -12,7 +12,7 @@ const {
   alchemyUrl,
   etherscanApiKey,
   coinmarketCapKey,
-} = require("./secretsManager.example.js");
+} = require("./secretsManager.js");
 
 require("./tasks/deploy");
 require("./tasks/factory")
@@ -48,6 +48,10 @@ module.exports = {
     hardhat: {
       allowUnlimitedContractSize: true,
       initialBaseFeePerGas: 0,
+    },
+    rinkeby: {
+      url: "https://rinkeby.infura.io/v3/9aa3d95b3bc440fa88ea12eaa4456161",
+      accounts: [rinkebyPrivateKey]
     }
   },
   etherscan: {
