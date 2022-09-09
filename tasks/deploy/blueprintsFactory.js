@@ -26,5 +26,5 @@ task("deploy:blueprintsFactory", "Deploys Blueprints factory")
 
     await blueprintsFactory.deployed();
 
-    console.log(`Blueprints factory deployed to: ${blueprintsFactory.address}`)
+    console.log(`Blueprints factory deployed to: ${blueprintsFactory.address}`) 
   });

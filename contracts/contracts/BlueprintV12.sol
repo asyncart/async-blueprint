@@ -122,13 +122,13 @@ contract BlueprintV12 is
     modifier isBlueprintPrepared(uint256 _blueprintID) {
         require(
             blueprints[_blueprintID].saleState != SaleState.not_prepared,
-            "not prepared"
+            "!prepared"
         );
         _;
     }
 
     modifier isSaleOngoing(uint256 _blueprintID) {
-        require(_isSaleOngoing(_blueprintID), "Not ongoing");
+        require(_isSaleOngoing(_blueprintID), "!ongoing");
         _;
     }
 
@@ -153,7 +153,7 @@ contract BlueprintV12 is
     ) {
         require(
             blueprints[_blueprintID].capacity >= _quantity,
-            "quantity too big"
+            "quantity >"
         );
         _;
     }
@@ -225,13 +225,13 @@ contract BlueprintV12 is
     ) internal pure returns (bool) {
         require(
             _feeRecipients.length == _feeBPS.length,
-            "fee data invalid"
+            "invalid"
         );
         uint32 totalPercent;
         for (uint256 i; i < _feeBPS.length; i++) {
             totalPercent = totalPercent + _feeBPS[i];
         }
-        require(totalPercent <= 10000, "fee bps too big");
+        require(totalPercent <= 10000, "bps over");
         return true;
     }
 
@@ -341,7 +341,7 @@ contract BlueprintV12 is
         uint64 _newCapacity,
         uint64 _newLatestErc721TokenIndex
     ) external onlyRole(MINTER_ROLE) {
-        require(blueprints[_blueprintID].capacity > _newCapacity, "cap too big");
+        require(blueprints[_blueprintID].capacity > _newCapacity, "cap over");
 
         blueprints[_blueprintID].capacity = _newCapacity;
 
@@ -354,11 +354,11 @@ contract BlueprintV12 is
     ) public onlyRole(MINTER_ROLE) {
         require(
             blueprints[_blueprintID].saleState != SaleState.not_prepared,
-            "never prepared"
+            "!prepared"
         );
         require(
             feeArrayDataValid(_feesInput.primaryFeeRecipients, _feesInput.primaryFeeBPS),
-            "invalid primary data"
+            "primary"
         ); 
 
         SecondaryFeesInput memory secondaryFeesInput = _feesInput.secondaryFeesInput;
@@ -571,14 +571,14 @@ contract BlueprintV12 is
             require(_tokenAmount == 0, "tokenAmount not zero");
             require(
                 msg.value == _quantity * _price,
-                "incorrect payment amount"
+                "$ != expected"
             );
             _payFeesAndArtist(_blueprintID, _erc20Token, msg.value, _artist);
         } else {
             require(msg.value == 0, "eth value not zero");
             require(
                 _tokenAmount == _quantity * _price,
-                "incorrect payment amount"
+                "$ != expected"
             );
 
             IERC20(_erc20Token).transferFrom(
@@ -625,7 +625,7 @@ contract BlueprintV12 is
     ) external onlyRole(MINTER_ROLE) isBlueprintPrepared(blueprintID) {
         require(
             !blueprints[blueprintID].tokenUriLocked,
-            "URI locked"
+            "uri locked"
         );
 
         blueprints[blueprintID].baseTokenUri = newBaseTokenUri;
@@ -640,7 +640,7 @@ contract BlueprintV12 is
     {
         require(
             !blueprints[blueprintID].tokenUriLocked,
-            "URI locked"
+            "uri locked"
         );
 
         blueprints[blueprintID].tokenUriLocked = true;
@@ -786,7 +786,7 @@ contract BlueprintV12 is
     function withdrawAllFailedCredits(address payable recipient) external {
         uint256 amount = failedTransferCredits[msg.sender];
 
-        require(amount != 0, "no credits");
+        require(amount != 0, "!credits");
 
         failedTransferCredits[msg.sender] = 0;
 

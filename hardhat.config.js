@@ -9,10 +9,12 @@ require('hardhat-contract-sizer');
 
 const {
   rinkebyPrivateKey,
+  goerliPrivateKey,
+  mumbaiPrivateKey,
   alchemyUrl,
   etherscanApiKey,
   coinmarketCapKey,
-} = require("./secretsManager.example.js");
+} = require("./secretsManager.js");
 
 require("./tasks/deploy");
 require("./tasks/factory")
@@ -48,6 +50,18 @@ module.exports = {
     hardhat: {
       allowUnlimitedContractSize: true,
       initialBaseFeePerGas: 0,
+    },
+    rinkeby: {
+      url: "https://rinkeby.infura.io/v3/",
+      accounts: [rinkebyPrivateKey]
+    },
+    goerli: {
+      url: "https://rpc.ankr.com/eth_goerli",
+      accounts: [goerliPrivateKey]
+    },
+    mumbai: {
+      url: "https://rpc-mumbai.maticvigil.com/",
+      accounts: [mumbaiPrivateKey]
     }
   },
   etherscan: {
