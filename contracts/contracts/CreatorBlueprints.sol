@@ -184,7 +184,8 @@ contract CreatorBlueprints is
     function initialize(
         CreatorBlueprintsInput calldata creatorBlueprintsInput,
         CreatorBlueprintsAdmins calldata creatorBlueprintsAdmins,
-        RoyaltyParameters calldata _royaltyParameters
+        RoyaltyParameters calldata _royaltyParameters,
+        address extraMinter
     ) public initializer validRoyaltyParameters(_royaltyParameters) {
         // Intialize parent contracts
         ERC721Upgradeable.__ERC721_init(creatorBlueprintsInput.name, creatorBlueprintsInput.symbol);
@@ -193,6 +194,9 @@ contract CreatorBlueprints is
 
         _setupRole(DEFAULT_ADMIN_ROLE, creatorBlueprintsAdmins.platform);
         _setupRole(MINTER_ROLE, creatorBlueprintsAdmins.minter);
+        if (extraMinter != address(0)) {
+            _setupRole(MINTER_ROLE, extraMinter);
+        }
 
         platform = creatorBlueprintsAdmins.platform;
         minterAddress = creatorBlueprintsAdmins.minter;

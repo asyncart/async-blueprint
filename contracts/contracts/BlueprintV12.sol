@@ -54,6 +54,7 @@ contract BlueprintV12 is
         uint32[] primaryFeeBPS;
         address[] primaryFeeRecipients;
         SecondaryFeesInput secondaryFeesInput;
+        bool deploySplit; 
     } 
 
     struct Fees {
@@ -370,7 +371,7 @@ contract BlueprintV12 is
         );
 
         // if pre-existing split isn't passed in, deploy it and set it. 
-        if (feeRecipientInfo.royaltyRecipient == address(0)) {
+        if (_feesInput.deploySplit) {
             feeRecipientInfo.royaltyRecipient = ISplitMain(_splitMain).createSplit(
                 secondaryFeesInput.secondaryFeeRecipients, 
                 secondaryFeesInput.secondaryFeeMPS, 

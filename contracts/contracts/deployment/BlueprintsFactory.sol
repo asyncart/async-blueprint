@@ -83,7 +83,7 @@ contract BlueprintsFactory is Ownable {
             creatorBlueprintsInput,
             royaltyCutBPS,
             split,
-            false
+            address(0)
         );
     }
 
@@ -91,9 +91,10 @@ contract BlueprintsFactory is Ownable {
         CreatorBlueprints.CreatorBlueprintsInput calldata creatorBlueprintsInput,
         uint32 royaltyCutBPS
     ) external {
+        (address[] memory recipients, uint32[] memory allocations) = _defaultRoyalties(creatorBlueprintsInput.artist);
         address split = ISplitMain(_splitMain).createSplit(
-            _defaultRoyaltiesAccounts(creatorBlueprintsInput.artist), 
-            _defaultRoyaltiesPercentAllocations(), 
+            recipients, 
+            allocations, 
             0, 
             address(0)
         );
@@ -102,7 +103,7 @@ contract BlueprintsFactory is Ownable {
             creatorBlueprintsInput, 
             royaltyCutBPS,
             split,
-            false
+            address(0)
         );
     }
 
@@ -116,13 +117,13 @@ contract BlueprintsFactory is Ownable {
             creatorBlueprintsInput,
             royaltyCutBPS,
             split,
-            true
+            address(this)
         );
 
         CreatorBlueprints(blueprintContract).prepareBlueprint(blueprintPreparationConfig);
 
-        // give minter role to actual minter 
-        CreatorBlueprints(blueprintContract).updateMinterAddress(defaultCreatorBlueprintsAdmins.minter);
+        // renounce role as minter
+        IAccessControlUpgradeable(blueprintContract).renounceRole(keccak256("MINTER_ROLE"), address(this));
     }
 
     function deployRoyaltySplitterAndPrepareCreatorBlueprints(
@@ -130,9 +131,10 @@ contract BlueprintsFactory is Ownable {
         CreatorBlueprints.BlueprintPreparationConfig calldata blueprintPreparationConfig,
         uint32 royaltyCutBPS
     ) external {
+        (address[] memory recipients, uint32[] memory allocations) = _defaultRoyalties(creatorBlueprintsInput.artist);
         address split = ISplitMain(_splitMain).createSplit(
-            _defaultRoyaltiesAccounts(creatorBlueprintsInput.artist), 
-            _defaultRoyaltiesPercentAllocations(), 
+            recipients, 
+            allocations, 
             0, 
             address(0)
         );
@@ -141,21 +143,22 @@ contract BlueprintsFactory is Ownable {
             creatorBlueprintsInput, 
             royaltyCutBPS,
             split,
-            true
+            address(this)
         );
 
         CreatorBlueprints(blueprintContract).prepareBlueprint(blueprintPreparationConfig);
 
-        // give minter role to actual minter 
-        CreatorBlueprints(blueprintContract).updateMinterAddress(defaultCreatorBlueprintsAdmins.minter);
+        // renounce role as minter
+        IAccessControlUpgradeable(blueprintContract).renounceRole(keccak256("MINTER_ROLE"), address(this));
     }
 
     function predictBlueprintsRoyaltiesSplitAddress(
         address _artist
-    ) external view {
-        ISplitMain(_splitMain).predictImmutableSplitAddress(
-            _defaultRoyaltiesAccounts(_artist), 
-            _defaultRoyaltiesPercentAllocations(), 
+    ) external view returns(address) {
+        (address[] memory recipients, uint32[] memory allocations) = _defaultRoyalties(_artist);
+        return ISplitMain(_splitMain).predictImmutableSplitAddress(
+            recipients, 
+            allocations, 
             0
         );
     }
@@ -164,21 +167,18 @@ contract BlueprintsFactory is Ownable {
         CreatorBlueprints.CreatorBlueprintsInput calldata creatorBlueprintsInput, 
         uint32 royaltyCutBPS,
         address split,
-        bool setTemporaryMinter // if true, set factory contract as temporary minter to prepare blueprint right after
+        address extraMinter // if true, set factory contract as temporary minter to prepare blueprint right after
     ) private returns (address) {
         CreatorBlueprints.RoyaltyParameters memory royaltyParameters = CreatorBlueprints.RoyaltyParameters(split, royaltyCutBPS);
         CreatorBlueprints.CreatorBlueprintsAdmins memory blueprintAdmins = defaultCreatorBlueprintsAdmins;
-        if (setTemporaryMinter) {
-            blueprintAdmins.minter = address(this);
-        }
-
         address creatorBlueprint = address(new BeaconProxy(
             beacon,
             abi.encodeWithSelector(
                 CreatorBlueprints(address(0)).initialize.selector, 
                 creatorBlueprintsInput,
                 blueprintAdmins,
-                royaltyParameters
+                royaltyParameters,
+                extraMinter
             )
         ));
 
@@ -190,18 +190,27 @@ contract BlueprintsFactory is Ownable {
         return creatorBlueprint;
     }
 
-    function _defaultRoyaltiesAccounts(address _artist) internal view returns(address[] memory) {
+    function _defaultRoyalties(address _artist) internal view returns(address[] memory, uint32[] memory) {
         address[] memory _recipients = new address[](2);
-        _recipients[0] = defaultCreatorBlueprintsAdmins.asyncSaleFeesRecipient; 
-        _recipients[1] = _artist;
-        return _recipients;
-    }
-
-    function _defaultRoyaltiesPercentAllocations() internal pure returns(uint32[] memory) {
         uint32[] memory _allocations = new uint32[](2); 
-        _allocations[0] = 250000; // 75%
-        _allocations[1] = 750000; // 25% 
-        return _allocations;
+        address asyncSaleFeesRecipient = defaultCreatorBlueprintsAdmins.asyncSaleFeesRecipient; // cache 
+
+        // avoiding AccountsOutOfOrder error 
+        if (_artist < asyncSaleFeesRecipient) {
+            _recipients[0] = _artist;
+            _recipients[1] = asyncSaleFeesRecipient;
+
+            _allocations[0] = 750000; // 75%
+            _allocations[1] = 250000; // 25% 
+        } else {
+            _recipients[0] = asyncSaleFeesRecipient;
+            _recipients[1] = _artist;
+
+            _allocations[0] = 250000; // 75%
+            _allocations[1] = 750000; // 25% 
+        }
+
+        return (_recipients, _allocations);
     }
 
     function changeDefaultCreatorBlueprintsAdmins(
