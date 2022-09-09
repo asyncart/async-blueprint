@@ -9,8 +9,6 @@ require('hardhat-contract-sizer');
 
 const {
   rinkebyPrivateKey,
-  goerliPrivateKey,
-  mumbaiPrivateKey,
   alchemyUrl,
   etherscanApiKey,
   coinmarketCapKey,
@@ -52,16 +50,8 @@ module.exports = {
       initialBaseFeePerGas: 0,
     },
     rinkeby: {
-      url: "https://rinkeby.infura.io/v3/",
+      url: "https://rinkeby.infura.io/v3/9aa3d95b3bc440fa88ea12eaa4456161",
       accounts: [rinkebyPrivateKey]
-    },
-    goerli: {
-      url: "https://rpc.ankr.com/eth_goerli",
-      accounts: [goerliPrivateKey]
-    },
-    mumbai: {
-      url: "https://rpc-mumbai.maticvigil.com/",
-      accounts: [mumbaiPrivateKey]
     }
   },
   etherscan: {
