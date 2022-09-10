@@ -10,7 +10,18 @@ import "@openzeppelin/contracts/proxy/beacon/IBeacon.sol";
 import "@openzeppelin/contracts/proxy/beacon/BeaconProxy.sol";
 import "@openzeppelin/contracts/proxy/transparent/TransparentUpgradeableProxy.sol";
 
+/**
+ * @dev Used to deploy and configure CreatorBlueprints contracts in multiple settings
+ * @author Ohimire Labs
+ */
 contract BlueprintsFactory is Ownable { 
+    /**
+     * @dev Emitted when contract is deployed, exposing Async Art system contracts deployed in the process
+     * @param creatorBlueprintsImplementation Address of deployed CreatorBlueprints implementation used in beacon upgradability 
+     * @param beacon Address of deployed beacon used in beacon upgradibility 
+     * @param blueprintV12Implemenation Address of deployed global BlueprintV12 implementation 
+     * @param globalBlueprints Address of BlueprintV12 (proxy)
+     */
     event FactoryDeployed(
         address creatorBlueprintsImplementation, 
         address beacon,
@@ -18,20 +29,45 @@ contract BlueprintsFactory is Ownable {
         address globalBlueprints
     );
 
+    /**
+     * @dev Emitted when CreatorBlueprint is deployed
+     * @param creatorBlueprint Address of deployed CreatorBlueprints BeaconProxy 
+     * @param royaltySplit Address of associated royalty splitter contract
+     */
     event CreatorBlueprintDeployed(
         address creatorBlueprint,
         address royaltySplit
     );
 
+    /**
+     * @dev Beacon keeping track of current CreatorBlueprint implementation
+     */
     address public immutable beacon; 
 
+    /**
+     * @dev System royalty manager
+     */
     address private immutable _splitMain;
 
+    /**
+     * @dev Set of default addresses to be given privileges in each CreatorBlueprint 
+     */
     CreatorBlueprints.CreatorBlueprintsAdmins public defaultCreatorBlueprintsAdmins;
 
+    /**
+     * @dev This constructor takes a network from raw to a fully deployed AsyncArt Blueprints system
+     * @param beaconUpgrader Account that can upgrade the CreatorBlueprint implementation 
+     * @param globalBlueprintsUpgrader Account able to upgrade global BlueprintV12
+     * @param globalBlueprintsName Name of BlueprintV12 contract
+     * @param globalBlueprintsSymbol Symbol of BlueprintV12 contract 
+     * @param creatorBlueprintsMinter Initial default address assigned MINTER_ROLE on CreatorBlueprints instances
+     * @param _platform Address given DEFAULT_ADMIN role on BlueprintV12 and set as initial default address assigned DEFAULT_ADMIN role on CreatorBlueprints instances
+     * @param splitMain Royalty manager
+     * @param factoryOwner Initial owner of this contract 
+     */
     constructor(
         address beaconUpgrader, 
-        address globalBlueprintsUpgraderAdmin,
+        address globalBlueprintsUpgrader,
         string memory globalBlueprintsName,
         string memory globalBlueprintsSymbol,
         address globalBlueprintsMinter,
@@ -50,7 +86,7 @@ contract BlueprintsFactory is Ownable {
         address blueprintV12Implementation = address(new BlueprintV12()); 
         address proxy = address(new TransparentUpgradeableProxy(
             blueprintV12Implementation,
-            globalBlueprintsUpgraderAdmin,
+            globalBlueprintsUpgrader,
             abi.encodeWithSelector(
                 BlueprintV12(address(0)).initialize.selector,
                 globalBlueprintsName,
@@ -74,6 +110,12 @@ contract BlueprintsFactory is Ownable {
         );
     }
 
+    /**
+     * @dev Deploy CreatorBlueprints contract only
+     * @param creatorBlueprintsInput Object containing core CreatorBlueprints configuration 
+     * @param royaltyCutBPS Total percentage of token purchases taken by royalty split on CreatorBlueprint deployed instance
+     * @param split Pre-existing royalty splits contract
+     */
     function deployCreatorBlueprints(
         CreatorBlueprints.CreatorBlueprintsInput calldata creatorBlueprintsInput,
         uint32 royaltyCutBPS,
@@ -87,13 +129,21 @@ contract BlueprintsFactory is Ownable {
         );
     }
 
+    /**
+     * @dev Deploy CreatorBlueprints and associated royalty splitter contract 
+     * @param creatorBlueprintsInput Object containing core CreatorBlueprints configuration 
+     * @param royaltyRecipients Array of royalty recipients to encode into immutable royalty split
+     * @param allocations Array of allocations by percentage, given to members in royaltyRecipients 
+     * @param royaltyCutBPS Total percentage of token purchases taken by royalty split on CreatorBlueprint deployed instance
+     */
     function deployCreatorBlueprintsAndRoyaltySplitter(
         CreatorBlueprints.CreatorBlueprintsInput calldata creatorBlueprintsInput,
+        address[] calldata royaltyRecipients, 
+        uint32[] calldata allocations,
         uint32 royaltyCutBPS
     ) external {
-        (address[] memory recipients, uint32[] memory allocations) = _defaultRoyalties(creatorBlueprintsInput.artist);
         address split = ISplitMain(_splitMain).createSplit(
-            recipients, 
+            royaltyRecipients, 
             allocations, 
             0, 
             address(0)
@@ -107,6 +157,13 @@ contract BlueprintsFactory is Ownable {
         );
     }
 
+    /**
+     * @dev Deploy CreatorBlueprints and prepare blueprint on it 
+     * @param creatorBlueprintsInput Object containing core CreatorBlueprints configuration 
+     * @param blueprintPreparationConfig Object containing all values needed to prepare blueprint
+     * @param royaltyCutBPS Total percentage of token purchases taken by royalty split on CreatorBlueprint deployed instance
+     * @param split Pre-existing royalty splits contract
+     */
     function deployAndPrepareCreatorBlueprints(
         CreatorBlueprints.CreatorBlueprintsInput calldata creatorBlueprintsInput,
         CreatorBlueprints.BlueprintPreparationConfig calldata blueprintPreparationConfig,
@@ -126,14 +183,23 @@ contract BlueprintsFactory is Ownable {
         IAccessControlUpgradeable(blueprintContract).renounceRole(keccak256("MINTER_ROLE"), address(this));
     }
 
+    /**
+     * @dev Deploy CreatorBlueprints, deploy associated royalty splitter contract, and prepare blueprint
+     * @param creatorBlueprintsInput Object containing core CreatorBlueprints configuration 
+     * @param blueprintPreparationConfig Object containing all values needed to prepare blueprint
+     * @param royaltyRecipients Array of royalty recipients to encode into immutable royalty split
+     * @param allocations Array of allocations by percentage, given to members in royaltyRecipients 
+     * @param royaltyCutBPS Total percentage of token purchases taken by royalty split on CreatorBlueprint deployed instance
+     */
     function deployRoyaltySplitterAndPrepareCreatorBlueprints(
         CreatorBlueprints.CreatorBlueprintsInput calldata creatorBlueprintsInput,
         CreatorBlueprints.BlueprintPreparationConfig calldata blueprintPreparationConfig,
+        address[] calldata royaltyRecipients, 
+        uint32[] calldata allocations,
         uint32 royaltyCutBPS
     ) external {
-        (address[] memory recipients, uint32[] memory allocations) = _defaultRoyalties(creatorBlueprintsInput.artist);
         address split = ISplitMain(_splitMain).createSplit(
-            recipients, 
+            royaltyRecipients, 
             allocations, 
             0, 
             address(0)
@@ -152,22 +218,34 @@ contract BlueprintsFactory is Ownable {
         IAccessControlUpgradeable(blueprintContract).renounceRole(keccak256("MINTER_ROLE"), address(this));
     }
 
+    /**
+     * @dev Used to predict royalty split address deployed via this factory. Result can be encoded into contract-level metadata before deployment.
+     * @param royaltyRecipients Array of royalty recipients to encode into immutable royalty split
+     * @param allocations Array of allocations by percentage, given to members in royaltyRecipients  
+     */
     function predictBlueprintsRoyaltiesSplitAddress(
-        address _artist
+        address[] calldata royaltyRecipients, 
+        uint32[] calldata allocations
     ) external view returns(address) {
-        (address[] memory recipients, uint32[] memory allocations) = _defaultRoyalties(_artist);
         return ISplitMain(_splitMain).predictImmutableSplitAddress(
-            recipients, 
+            royaltyRecipients, 
             allocations, 
             0
         );
     }
 
+    /**
+     * @dev Deploys CreatorBlueprints contract 
+     * @param creatorBlueprintsInput Object containing core CreatorBlueprints configuration 
+     * @param royaltyCutBPS Total percentage of token purchases taken by royalty split on CreatorBlueprint deployed instance
+     * @param split Pre-existing royalty splits contract 
+     * @param extraMinter Extra account given MINTER_ROLE initially on CreatorBlueprint instance. Expected to be revoked in same transaction, if input is non-zero. 
+     */
     function _deployCreatorBlueprints(
         CreatorBlueprints.CreatorBlueprintsInput calldata creatorBlueprintsInput, 
         uint32 royaltyCutBPS,
         address split,
-        address extraMinter // if true, set factory contract as temporary minter to prepare blueprint right after
+        address extraMinter
     ) private returns (address) {
         CreatorBlueprints.RoyaltyParameters memory royaltyParameters = CreatorBlueprints.RoyaltyParameters(split, royaltyCutBPS);
         CreatorBlueprints.CreatorBlueprintsAdmins memory blueprintAdmins = defaultCreatorBlueprintsAdmins;
@@ -190,29 +268,10 @@ contract BlueprintsFactory is Ownable {
         return creatorBlueprint;
     }
 
-    function _defaultRoyalties(address _artist) internal view returns(address[] memory, uint32[] memory) {
-        address[] memory _recipients = new address[](2);
-        uint32[] memory _allocations = new uint32[](2); 
-        address asyncSaleFeesRecipient = defaultCreatorBlueprintsAdmins.asyncSaleFeesRecipient; // cache 
-
-        // avoiding AccountsOutOfOrder error 
-        if (_artist < asyncSaleFeesRecipient) {
-            _recipients[0] = _artist;
-            _recipients[1] = asyncSaleFeesRecipient;
-
-            _allocations[0] = 750000; // 75%
-            _allocations[1] = 250000; // 25% 
-        } else {
-            _recipients[0] = asyncSaleFeesRecipient;
-            _recipients[1] = _artist;
-
-            _allocations[0] = 250000; // 75%
-            _allocations[1] = 750000; // 25% 
-        }
-
-        return (_recipients, _allocations);
-    }
-
+    /**
+     * @dev Owner-only function to change the default addresses given privileges on CreatorBlueprints instances 
+     * @param _newDefaultCreatorBlueprintsAdmins New set of default addresses
+     */
     function changeDefaultCreatorBlueprintsAdmins(
         CreatorBlueprints.CreatorBlueprintsAdmins calldata _newDefaultCreatorBlueprintsAdmins
     ) external onlyOwner {

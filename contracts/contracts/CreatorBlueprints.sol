@@ -8,6 +8,10 @@ import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "@openzeppelin/contracts/utils/cryptography/MerkleProof.sol";
 import "@openzeppelin/contracts/security/ReentrancyGuard.sol";
 
+/**
+ * @dev Async Art Blueprint NFT contract with true creator provenance
+ * @author Async Art, Ohimire Labs 
+ */
 contract CreatorBlueprints is
     ERC721Upgradeable,
     HasSecondarySaleFees,
@@ -16,22 +20,64 @@ contract CreatorBlueprints is
 {
     using StringsUpgradeable for uint256;
 
+    /**
+     * @dev Default fee given to platform on primary sales
+     */
     uint32 public defaultPlatformPrimaryFeePercentage;    
+
+    /**
+     * @dev Token id of last ERC721 NFT minted
+     */ 
     uint64 public latestErc721TokenIndex;
 
+    /**
+     * @dev Platform account receiving fees from primary sales
+     */
     address public asyncSaleFeesRecipient;
+
+    /**
+     * @dev Account representing platform 
+     */
     address public platform;
+
+    /**
+     * @dev Account able to perform actions restricted to MINTER_ROLE holder
+     */
     address public minterAddress;
+
+    /**
+     * @dev Blueprint artist 
+     */
     address public artist;
     
+    /**
+     * @dev Tracks failed transfers of native gas token 
+     */
     mapping(address => uint256) failedTransferCredits;
+
+    /**
+     * @dev Blueprint, core object of contract
+     */
     Blueprints public blueprint;
+
+    /**
+     * @dev Royalty config 
+     */
     RoyaltyParameters public royaltyParameters;
 
+    /**
+     * @dev Contract-level metadata 
+     */
     string public contractURI; 
 
+    /**
+     * @dev Holders of this role are given minter privileges 
+     */
     bytes32 public constant MINTER_ROLE = keccak256("MINTER_ROLE");
 
+    /**
+     * @dev Tracks state of Blueprint sale
+     */
     enum SaleState {
         not_prepared,
         not_started,
@@ -39,16 +85,42 @@ contract CreatorBlueprints is
         paused
     }
 
+    /**
+     * @dev Object holding primary fee data
+     * @param primaryFeeBPS Primary fee percentage allocations, in basis points
+     * @param primaryFeeRecipients Primary fee recipients 
+     */
     struct Fees {
         uint32[] primaryFeeBPS;
         address[] primaryFeeRecipients;
     }
 
+    /**
+     * @dev Object holding royalty data
+     * @param split Royalty splitter receiving royalties
+     * @param royaltyCutBPS Total percentage of token sales sent to split, in basis points 
+     */
     struct RoyaltyParameters {
         address split;
         uint32 royaltyCutBPS;
     }
 
+    /**
+     * @dev Blueprint
+     * @param mintAmountArtist Amount of NFTs of Blueprint mintable by artist
+     * @param mintAmountPlatform Amount of NFTs of Blueprint mintable by platform 
+     * @param capacity Number of NFTs in Blueprint 
+     * @param erc721TokenIndex Token ID of last NFT minted for Blueprint
+     * @param maxPurchaseAmount Max number of NFTs purchasable in a single transaction
+     * @param saleEndTimestamp Timestamp when the sale ends 
+     * @param price Price per NFT in Blueprint
+     * @param tokenUriLocked If the token metadata isn't updatable 
+     * @param ERC20Token Address of ERC20 currency required to buy NFTs, can be zero address if expected currency is native gas token 
+     * @param baseTokenUri Base URI for token, resultant uri for each token is base uri concatenated with token id
+     * @param merkleroot Root of Merkle tree holding whitelisted accounts 
+     * @param saleState State of sale
+     * @param feeRecipientInfo Object containing primary and secondary fee configuration
+     */ 
     struct Blueprints {
         uint32 mintAmountArtist;
         uint32 mintAmountPlatform;
@@ -65,6 +137,20 @@ contract CreatorBlueprints is
         Fees feeRecipientInfo;
     }
 
+    /**
+     * @dev Object passed in when preparing blueprint 
+     * @param _capacity Number of NFTs in Blueprint 
+     * @param _price Price per NFT in Blueprint
+     * @param _erc20Token Address of ERC20 currency required to buy NFTs, can be zero address if expected currency is native gas token 
+     * @param _blueprintMetaData Blueprint metadata uri
+     * @param _baseTokenUri Base URI for token, resultant uri for each token is base uri concatenated with token id
+     * @param _merkleroot Root of Merkle tree holding whitelisted accounts 
+     * @param _mintAmountArtist Amount of NFTs of Blueprint mintable by artist
+     * @param _mintAmountPlatform Amount of NFTs of Blueprint mintable by platform 
+     * @param _maxPurchaseAmount Max number of NFTs purchasable in a single transaction
+     * @param _saleEndTimestamp Timestamp when the sale ends 
+     * @param _feeRecipientInfo Object containing primary and secondary fee configuration
+     */ 
     struct BlueprintPreparationConfig {
         uint64 _capacity;
         uint128 _price;
@@ -78,6 +164,14 @@ contract CreatorBlueprints is
         uint128 _saleEndTimestamp;
         Fees _feeRecipientInfo; 
     }
+
+    /**
+     * @dev Creator config of contract
+     * @param name Contract name
+     * @param symbol Contract symbol
+     * @param contractURI Contract-level metadata 
+     * @param artist Blueprint artist
+     */
     struct CreatorBlueprintsInput {
         string name;
         string symbol;
@@ -85,14 +179,32 @@ contract CreatorBlueprints is
         address artist;
     }
 
+    /**
+     * @dev Core administrative accounts 
+     * @param platform Platform, holder of DEFAULT_ADMIN role
+     * @param minter Minter, holder of MINTER_ROLE
+     * @param asyncSaleFeesRecipient Recipient of primary sale fees going to platform
+     */
     struct CreatorBlueprintsAdmins {
         address platform;
         address minter;
         address asyncSaleFeesRecipient;
     }
 
+    /**
+     * @dev Emitted when blueprint seed is revealed
+     * @param randomSeed Revealed seed
+     */
     event BlueprintSeed(string randomSeed);
 
+    /**
+     * @dev Emitted when NFTs of blueprint are minted
+     * @param artist Blueprint artist
+     * @param purchaser Purchaser of NFTs
+     * @param tokenId NFT minted
+     * @param newCapacity New capacity of tokens left in blueprint 
+     * @param seedPrefix Seed prefix hash
+     */
     event BlueprintMinted(
         address artist,
         address purchaser,
@@ -101,6 +213,13 @@ contract CreatorBlueprints is
         bytes32 seedPrefix
     );
 
+    /**
+     * @dev Emitted when blueprint is prepared
+     * @param artist Blueprint artist
+     * @param capacity Number of NFTs in blueprint
+     * @param blueprintMetaData Blueprint metadata uri
+     * @param baseTokenUri Blueprint's base token uri. Token uris are a result of the base uri concatenated with token id 
+     */ 
     event BlueprintPrepared(
         address artist,
         uint64 capacity,
@@ -108,6 +227,16 @@ contract CreatorBlueprints is
         string baseTokenUri
     );
 
+    /**
+     * @dev Emitted when blueprint settings are updated
+     * @param price Price for NFTs on blueprint
+     * @param newMintAmountArtist New mintAmountArtist
+     * @param newMintAmountPlatform New mintAmountPlatform
+     * @param newSaleState New saleState
+     * @param newMaxPurchaseAmount New maxPurchaseAmount
+     * @param saleEndTimestamp Timestamp denoting when sale ends
+     * @param newMerkleRoot New root of merkle tree allowlist
+     */ 
     event BlueprintSettingsUpdated(
         uint128 price,
         uint32 newMintAmountArtist,
@@ -118,14 +247,30 @@ contract CreatorBlueprints is
         bytes32 newMerkleRoot
     );
 
+    /**
+     * @dev Emitted when blueprint sale is started
+     */
     event SaleStarted();
 
+    /**
+     * @dev Emitted when blueprint sale is paused
+     */
     event SalePaused();
 
+    /**
+     * @dev Emitted when blueprint sale is unpaused
+     */
     event SaleUnpaused();
 
+    /**
+     * @dev Emitted when blueprint token uri is updated 
+     * @param newBaseTokenUri New base uri 
+     */
     event BlueprintTokenUriUpdated(string newBaseTokenUri);
 
+    /**
+     * @dev Checks blueprint sale state
+     */
     modifier isBlueprintPrepared() {
         require(
             blueprint.saleState != SaleState.not_prepared,
@@ -134,11 +279,19 @@ contract CreatorBlueprints is
         _;
     }
 
+    /**
+     * @dev Checks if blueprint sale is ongoing
+     */
     modifier isSaleOngoing() {
         require(_isSaleOngoing(), "Sale not ongoing");
         _;
     }
 
+    /**
+     * @dev Checks if the current purchaser is whitelisted or the public sale has started 
+     * @param _whitelistedQuantity Purchaser's requested quantity. Validated against merkle tree
+     * @param proof Corresponding proof for purchaser in merkle tree 
+     */ 
     modifier BuyerWhitelistedOrSaleStarted(
         uint32 _whitelistedQuantity,
         bytes32[] calldata proof
@@ -153,6 +306,10 @@ contract CreatorBlueprints is
         _;
     }
 
+    /**
+     * @dev Checks if quantity of NFTs is available for purchase in blueprint
+     * @param _quantity Quantity of NFTs being checked 
+     */ 
     modifier isQuantityAvailableForPurchase(
         uint32 _quantity
     ) {
@@ -163,6 +320,10 @@ contract CreatorBlueprints is
         _;
     }
 
+    /**
+     * @dev Checks if sale is still valid, given the sale end timestamp 
+     * @param _saleEndTimestamp Sale end timestamp 
+     */ 
     modifier isSaleEndTimestampCurrentlyValid(
         uint128 _saleEndTimestamp
     ) {
@@ -170,7 +331,10 @@ contract CreatorBlueprints is
         _;
     }
 
-    // allow 0 values for cut and split address  
+    /**
+     * @dev Validates royalty parameters. Allow null-equivalent values for certain use-cases
+     * @param _royaltyParameters Royalty parameters 
+     */
     modifier validRoyaltyParameters(
         RoyaltyParameters calldata _royaltyParameters
     ) {
@@ -178,9 +342,12 @@ contract CreatorBlueprints is
         _;
     }
 
-    ///
-    ///Initialize the implementation
-    ///
+    /**
+     * @dev Iniitalize the implementation 
+     * @param creatorBlueprintsInput Core parameters for contract initialization 
+     * @param creatorBlueprintsAdmins Administrative accounts 
+     * @param _royaltyParameters Initial royalty settings 
+     */
     function initialize(
         CreatorBlueprintsInput calldata creatorBlueprintsInput,
         CreatorBlueprintsAdmins calldata creatorBlueprintsAdmins,
@@ -209,6 +376,9 @@ contract CreatorBlueprints is
         royaltyParameters = _royaltyParameters;
     }
 
+    /**
+     * @dev Validates that sale is still ongoing
+     */
     function _isSaleOngoing()
         internal
         view
@@ -216,7 +386,11 @@ contract CreatorBlueprints is
     {
         return blueprint.saleState == SaleState.started && _isSaleEndTimestampCurrentlyValid(blueprint.saleEndTimestamp);
     }
-
+ 
+    /**
+     * @dev Checks if sale is still valid, given the sale end timestamp 
+     * @param _saleEndTimestamp Sale end timestamp 
+     */  
     function _isSaleEndTimestampCurrentlyValid(uint128 _saleEndTimestamp)
         internal
         view
@@ -225,6 +399,9 @@ contract CreatorBlueprints is
         return _saleEndTimestamp > block.timestamp || _saleEndTimestamp == 0;
     }
 
+    /**
+     * @dev Checks that blueprint is prepared but sale for it hasn't started 
+     */
     function _isBlueprintPreparedAndNotStarted()
         internal
         view
@@ -233,6 +410,11 @@ contract CreatorBlueprints is
         return blueprint.saleState == SaleState.not_started;
     }
 
+    /**
+     * @dev Checks that the recipients and allocations arrays of royalties are valid  
+     * @param _feeRecipients Fee recipients
+     * @param _feeBPS Allocations in percentages for fee recipients (basis points)
+     */ 
     function feeArrayDataValid(
         address[] memory _feeRecipients,
         uint32[] memory _feeBPS
@@ -249,6 +431,10 @@ contract CreatorBlueprints is
         return true;
     }
 
+    /**
+     * @dev Sets values after blueprint preparation
+     * @param _blueprintMetaData Blueprint metadata uri 
+     */
     function setBlueprintPrepared(
         string memory _blueprintMetaData
     ) internal {
@@ -266,12 +452,26 @@ contract CreatorBlueprints is
         );
     }
 
+    /**
+     * @dev Sets the ERC20 token value of a blueprint
+     * @param _erc20Token ERC20 token being set
+     */ 
     function setErc20Token(address _erc20Token) internal {
         if (_erc20Token != address(0)) {
             blueprint.ERC20Token = _erc20Token;
         }
     }
 
+    /**
+     * @dev Sets up most blueprint parameters 
+     * @param _erc20Token ERC20 currency 
+     * @param _baseTokenUri Base token uri for blueprint
+     * @param _merkleroot Root of merkle tree allowlist
+     * @param _mintAmountArtist Amount that artist can mint of blueprint
+     * @param _mintAmountPlatform Amount that platform can mint of blueprint 
+     * @param _maxPurchaseAmount Max amount of NFTs purchasable in one transaction
+     * @param _saleEndTimestamp When the sale ends
+     */
     function _setupBlueprint(
         address _erc20Token,
         string memory _baseTokenUri,
@@ -303,6 +503,10 @@ contract CreatorBlueprints is
         }
     }
 
+    /** 
+     * @dev Prepare the blueprint (this is the core operation to set up a blueprint)
+     * @param config Object containing all values required to prepare blueprint
+     */  
     function prepareBlueprint(
         BlueprintPreparationConfig calldata config
     )   external 
@@ -325,12 +529,21 @@ contract CreatorBlueprints is
         setFeeRecipients(config._feeRecipientInfo);
     }
 
+    /**
+     * @dev Update a blueprint's artist
+     * @param _newArtist New artist
+     */
     function updateBlueprintArtist (
         address _newArtist
     ) external onlyRole(MINTER_ROLE) {
         artist = _newArtist;
     }
 
+    /**
+     * @dev Update a blueprint's capacity 
+     * @param _newCapacity New capacity
+     * @param _newLatestErc721Index Newly adjusted last ERC721 token id 
+     */
     function updateBlueprintCapacity (
         uint64 _newCapacity,
         uint64 _newLatestErc721TokenIndex
@@ -342,6 +555,10 @@ contract CreatorBlueprints is
         latestErc721TokenIndex = _newLatestErc721TokenIndex;
     }
 
+    /**
+     * @dev Set the primary fees config of blueprint
+     * @param _feeRecipientInfo Fees config 
+     */
     function setFeeRecipients(
         Fees memory _feeRecipientInfo
     ) public onlyRole(MINTER_ROLE) {
@@ -354,6 +571,9 @@ contract CreatorBlueprints is
         }
     }
 
+    /**
+     * @dev Begin blueprint's sale
+     */
     function beginSale()
         external
         onlyRole(MINTER_ROLE)
@@ -367,6 +587,9 @@ contract CreatorBlueprints is
         emit SaleStarted();
     }
 
+    /**
+     * @dev Pause blueprint's sale
+     */
     function pauseSale()
         external
         onlyRole(MINTER_ROLE)
@@ -376,6 +599,9 @@ contract CreatorBlueprints is
         emit SalePaused();
     }
 
+    /**
+     * @dev Unpause blueprint's sale
+     */
     function unpauseSale() external onlyRole(MINTER_ROLE) isSaleEndTimestampCurrentlyValid(blueprint.saleEndTimestamp) {
         require(
             blueprint.saleState == SaleState.paused,
@@ -385,6 +611,11 @@ contract CreatorBlueprints is
         emit SaleUnpaused();
     }
 
+    /**
+     * @dev Update blueprint's merkle tree root 
+     * @param oldProof Old proof for leaf being updated, used for validation 
+     * @param remainingWhitelistAmount Remaining whitelist amount of NFTs 
+     */
     function _updateMerkleRootForPurchase(
         bytes32[] memory oldProof,
         uint32 remainingWhitelistAmount
@@ -397,6 +628,14 @@ contract CreatorBlueprints is
         blueprint.merkleroot = MerkleProof.processMultiProof(oldProof, proofFlags, leaves);
     }
 
+    /**
+     * @dev Purchase NFTs of blueprint to a recipient address
+     * @param purchaseQuantity How many NFTs to purchase 
+     * @param whitelistedQuantity How many NFTS are whitelisted for the blueprint 
+     * @param tokenAmount Payment amount 
+     * @param proof Merkle tree proof 
+     * @param nftRecipient Recipient of minted NFTs
+     */
     function purchaseBlueprintsTo(
         uint32 purchaseQuantity,
         uint32 whitelistedQuantity,
@@ -426,6 +665,13 @@ contract CreatorBlueprints is
         _updateMerkleRootForPurchase(proof, whitelistedQuantity - purchaseQuantity);
     }
 
+    /**
+     * @dev Purchase NFTs of blueprint to the sender
+     * @param purchaseQuantity How many NFTs to purchase 
+     * @param whitelistedQuantity How many NFTS are whitelisted for the blueprint 
+     * @param tokenAmount Payment amount 
+     * @param proof Merkle tree proof 
+     */ 
     function purchaseBlueprints(
         uint32 purchaseQuantity,
         uint32 whitelistedQuantity,
@@ -455,6 +701,10 @@ contract CreatorBlueprints is
         _updateMerkleRootForPurchase(proof, whitelistedQuantity - purchaseQuantity);
     }
 
+    /**
+     * @dev Lets the artist mint NFTs of the blueprint
+     * @param quantity How many NFTs to mint
+     */
     function artistMint(
         uint32 quantity
     )
@@ -488,8 +738,10 @@ contract CreatorBlueprints is
         _mintQuantity(quantity, msg.sender);
     }
 
-    /*
-     * Iterate and mint each blueprint for user
+    /**
+     * @dev Mint a quantity of NFTs of blueprint to a recipient 
+     * @param _quantity Quantity to mint
+     * @param _nftRecipient Recipient of minted NFTs
      */
     function _mintQuantity(uint32 _quantity, address _nftRecipient) private {
         uint128 newTokenId = blueprint.erc721TokenIndex;
@@ -521,6 +773,12 @@ contract CreatorBlueprints is
         blueprint.capacity = newCap;
     }
 
+    /**
+     * @dev Pay for minting NFTs 
+     * @param _quantity Quantity of NFTs to purchase
+     * @param _tokenAmount Payment amount provided
+     * @param _artist Artist of blueprint
+     */
     function _confirmPaymentAmountAndSettleSale(
         uint32 _quantity,
         uint256 _tokenAmount,
@@ -560,6 +818,12 @@ contract CreatorBlueprints is
      * The msg.sender will be verified if it has a corresponding quantity value in the merkletree
      */
 
+    /**
+     * @dev Create a merkle tree with address: quantity pairs as the leaves.
+     *      The msg.sender will be verified if it has a corresponding quantity value in the merkletree
+     * @param account Minting account being verified
+     * @param quantity Quantity to mint, being verified
+     */ 
     function _leaf(address account, uint256 quantity)
         internal
         pure
@@ -568,6 +832,12 @@ contract CreatorBlueprints is
         return keccak256(abi.encodePacked(account, quantity));
     }
 
+    /**
+     * @dev Verify a leaf's inclusion in a merkle tree with its root and corresponding proof
+     * @param leaf Leaf to verify
+     * @param merkleroot Merkle tree's root
+     * @param proof Corresponding proof for leaf
+     */ 
     function _verify(
         bytes32 leaf,
         bytes32 merkleroot,
@@ -580,6 +850,10 @@ contract CreatorBlueprints is
     /// ONLY ADMIN functions ///
     ////////////////////////////
 
+    /**
+     * @dev Update blueprint's token uri
+     * @param newBaseTokenUri New base token uri to update to
+     */ 
     function updateBlueprintTokenUri(
         string memory newBaseTokenUri
     ) external onlyRole(MINTER_ROLE) isBlueprintPrepared() {
@@ -593,6 +867,9 @@ contract CreatorBlueprints is
         emit BlueprintTokenUriUpdated(newBaseTokenUri);
     }
 
+    /**
+     * @dev Lock blueprint's token uri (from changing)
+     */  
     function lockBlueprintTokenUri()
         external
         onlyRole(DEFAULT_ADMIN_ROLE)
@@ -606,6 +883,11 @@ contract CreatorBlueprints is
         blueprint.tokenUriLocked = true;
     }
 
+    /**
+     * @dev Return token's uri
+     * @param tokenId ID of token to return uri for
+     * @return Token uri, constructed by taking base uri of blueprint, and concatenating token id
+     */ 
     function tokenURI(uint256 tokenId)
         public
         view
@@ -633,6 +915,10 @@ contract CreatorBlueprints is
                 : "";
     }
 
+    /**
+     * @dev Reveal blueprint's seed by emitting public event 
+     * @param randomSeed Revealed seed 
+     */
     function revealBlueprintSeed(string memory randomSeed)
         external
         onlyRole(MINTER_ROLE)
@@ -641,6 +927,10 @@ contract CreatorBlueprints is
         emit BlueprintSeed(randomSeed);
     }
 
+    /**
+     * @dev Set the contract-wide recipient of primary sale feess
+     * @param _asyncSaleFeesRecipient New async sale fees recipient 
+     */
     function setAsyncFeeRecipient(address _asyncSaleFeesRecipient)
         external
         onlyRole(DEFAULT_ADMIN_ROLE)
@@ -648,6 +938,10 @@ contract CreatorBlueprints is
         asyncSaleFeesRecipient = _asyncSaleFeesRecipient;
     }
 
+    /**
+     * @dev Change the default percentage of primary sales sent to platform
+     * @param _basisPoints New default platform primary fee percentage (in basis points)
+     */   
     function changeDefaultPlatformPrimaryFeePercentage(uint32 _basisPoints)
         external
         onlyRole(DEFAULT_ADMIN_ROLE)
@@ -656,6 +950,10 @@ contract CreatorBlueprints is
         defaultPlatformPrimaryFeePercentage = _basisPoints;
     }
 
+    /**
+     * @dev Update royalty config
+     * @param _roayltyParameters New royalty parameters
+     */  
     function updateRoyaltyParameters(RoyaltyParameters calldata _royaltyParameters) 
         external
         onlyRole(DEFAULT_ADMIN_ROLE)
@@ -664,6 +962,10 @@ contract CreatorBlueprints is
         royaltyParameters = _royaltyParameters; 
     }
 
+    /**
+     * @dev Update contract-wide platform address, and DEFAULT_ADMIN role ownership
+     * @param _platform New platform address
+     */   
     function updatePlatformAddress(address _platform)
         external
         onlyRole(DEFAULT_ADMIN_ROLE)
@@ -674,7 +976,10 @@ contract CreatorBlueprints is
         platform = _platform;
     }
 
-    // Allows the platform to change the minter address
+    /**
+     * @dev Update contract-wide minter address, and MINTER_ROLE role ownership
+     * @param newMinterAddress New minter address
+     */ 
     function updateMinterAddress(address newMinterAddress)
         external
         onlyRole(DEFAULT_ADMIN_ROLE)
@@ -689,6 +994,12 @@ contract CreatorBlueprints is
     /// Secondary Fees implementation //
     ////////////////////////////////////
 
+    /**
+     * @dev Pay primary fees owed to primary fee recipients
+     * @param _erc20Token ERC20 token used for payment (if used)
+     * @param _amount Payment amount 
+     * @param _artist Artist being paid
+     */
     function _payFeesAndArtist(
         address _erc20Token,
         uint256 _amount,
@@ -708,6 +1019,12 @@ contract CreatorBlueprints is
         }
     }
 
+    /**
+     * @dev Simple payment function to pay an amount of currency to a recipient
+     * @param _recipient Recipient of payment 
+     * @param _erc20Token ERC20 token used for payment (if used)
+     * @param _amount Payment amount 
+     */
     function _payout(
         address _recipient,
         address _erc20Token,
@@ -730,6 +1047,11 @@ contract CreatorBlueprints is
         }
     }
 
+    /**
+     * @dev When a native gas token payment fails, credits are stored so that the would-be recipient can withdraw them later.
+     *      Withdraw failed credits for a recipient
+     * @param recipient Recipient owed some amount of native gas token   
+     */
     function withdrawAllFailedCredits(address payable recipient) external {
         uint256 amount = failedTransferCredits[msg.sender];
 
@@ -743,6 +1065,9 @@ contract CreatorBlueprints is
         require(successfulWithdraw, "withdraw failed");
     }
 
+    /**
+     * @dev Get primary fee recipients of blueprint 
+     */ 
     function getPrimaryFeeRecipients()
         public
         view
@@ -757,6 +1082,9 @@ contract CreatorBlueprints is
         }
     }
 
+    /**
+     * @dev Get primary fee bps (allocations) of blueprint 
+     */
     function getPrimaryFeeBps()
         public
         view
@@ -772,7 +1100,10 @@ contract CreatorBlueprints is
         }
     }
 
-    // ignore unused tokenId
+    /**
+     * @dev Get secondary fee recipients of a token 
+     * @param tokenId Token ID
+     */
     function getFeeRecipients(uint256 tokenId)
         public
         view
@@ -784,7 +1115,10 @@ contract CreatorBlueprints is
         return feeRecipients;
     }
 
-    // ignore unused tokenId
+    /**
+     * @dev Get secondary fee bps (allocations) of a token 
+     * @param tokenId Token ID
+     */
     function getFeeBps(uint256 tokenId)
         public
         view
@@ -796,7 +1130,12 @@ contract CreatorBlueprints is
         return feeBps;
     }
 
-    // ERC-2981, ignore token id
+    /**
+     * @dev Support ERC-2981
+     * @param _tokenId ID of token to return royalty for
+     * @param _salePrice Price that NFT was sold at
+     * @return (reciver, royaltyAmount) Returns amount to send to royalty split
+     */
     function royaltyInfo(
         uint256 _tokenId,
         uint256 _salePrice
@@ -808,7 +1147,10 @@ contract CreatorBlueprints is
         royaltyAmount = _salePrice * royaltyParameters.royaltyCutBPS / 10000;
     }
 
-    // used for interoperability purposes 
+    /**
+     * @dev Used for interoperability purposes
+     * @return Returns platform address as owner of contract 
+     */
     function owner() public view virtual returns (address) {
         return platform;
     }
@@ -817,6 +1159,11 @@ contract CreatorBlueprints is
     /// Required function overide //////
     ////////////////////////////////////
 
+    /**
+     * @dev Override isApprovedForAll to also let the DEFAULT_ADMIN_ROLE move tokens
+     * @param account Account holding tokens being moved
+     * @param operator Operator moving tokens
+     */
     function isApprovedForAll(address account, address operator)
         public
         view
@@ -828,6 +1175,11 @@ contract CreatorBlueprints is
             hasRole(DEFAULT_ADMIN_ROLE, operator);
     }
 
+    /**
+     * @dev ERC165 - Validate that the contract supports a interface
+     * @param interfaceId ID of interface being validated 
+     * @return Returns true if contract supports interface
+     */
     function supportsInterface(bytes4 interfaceId)
         public
         view
