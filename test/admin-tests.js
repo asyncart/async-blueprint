@@ -10,24 +10,35 @@ const zero = BigNumber.from(0).toString();
 
 describe("Admin Blueprint Tests", function () {
   let Blueprint;
+  let SplitMain;
+  let splitMain; 
   let blueprint;
-  let feeRecipients = {
+  let feesInput = {
     primaryFeeBPS: [],
-    secondaryFeeBPS: [],
     primaryFeeRecipients: [],
-    secondaryFeeRecipients: []
+    secondaryFeesInput: {
+      secondaryFeeRecipients: [],
+      secondaryFeeMPS: [],
+      totalRoyaltyCutBPS: 1000,
+      royaltyRecipient: zeroAddress
+    },
+    deploySplit: false
   }
 
   beforeEach(async function () {
     [ContractOwner, user1, user2, user3, testArtist, testPlatform] =
       await ethers.getSigners();
 
-    feeRecipients.primaryFeeRecipients = [ContractOwner.address, testArtist.address];
-    feeRecipients.primaryFeeBPS = [1000, 9000];
+    feesInput.primaryFeeRecipients = [ContractOwner.address, testArtist.address];
+    feesInput.primaryFeeBPS = [1000, 9000];
+    feesInput.secondaryFeesInput.secondaryFeeRecipients = [ContractOwner.address, testArtist.address];
+    feesInput.secondaryFeesInput.secondaryFeeMPS = [100000, 900000]    
 
     Blueprint = await ethers.getContractFactory("BlueprintV12");
     blueprint = await Blueprint.deploy();
-    blueprint.initialize("Async Blueprint", "ABP", ContractOwner.address, ContractOwner.address);
+    SplitMain = await ethers.getContractFactory("SplitMain");
+    splitMain = await SplitMain.deploy();
+    blueprint.initialize("Async Blueprint", "ABP", ContractOwner.address, ContractOwner.address, splitMain.address);
   });
   it("1.a: should update minter role", async function () {
     await blueprint.connect(ContractOwner).updateMinterAddress(user2.address);
@@ -45,7 +56,7 @@ describe("Admin Blueprint Tests", function () {
         0,
         0,
         0,
-        feeRecipients
+        feesInput
       );
     let result = await blueprint.blueprints(0);
     expect(result.artist).to.be.equal(testArtist.address);
@@ -73,7 +84,7 @@ describe("Admin Blueprint Tests", function () {
         0,
         0,
         0,
-        feeRecipients
+        feesInput
       );
     let updatedUri = "http://updatedUri/";
     await blueprint.connect(ContractOwner).updateMinterAddress(user2.address);
@@ -87,7 +98,7 @@ describe("Admin Blueprint Tests", function () {
     let updatedUri = "http://updatedUri/";
     await expect(
       blueprint.connect(ContractOwner).updateBlueprintTokenUri(0, updatedUri)
-    ).to.be.revertedWith("not prepared");
+    ).to.be.revertedWith("!prepared");
   });
   it("2.c: should lock token URI", async function () {
     await blueprint
@@ -104,14 +115,14 @@ describe("Admin Blueprint Tests", function () {
         0,
         0,
         0,
-        feeRecipients
+        feesInput
       );
     let updatedUri = "http://updatedUri/";
 
     await blueprint.connect(ContractOwner).lockBlueprintTokenUri(0);
     await expect(
       blueprint.connect(ContractOwner).updateBlueprintTokenUri(0, updatedUri)
-    ).to.be.revertedWith("URI locked");
+    ).to.be.revertedWith("uri locked");
   });
   // it("2.d: should allow platform to update base token uri", async function () {
   //   await blueprint
@@ -130,7 +141,7 @@ describe("Admin Blueprint Tests", function () {
   //     );
   //   await blueprint
   //     .connect(ContractOwner)
-  //     .setFeeRecipients(0, feeRecipients, feeBps, [], []);
+  //     .setFeeRecipients(0, feesInput, feeBps, [], []);
 
   //   await blueprint
   //     .connect(ContractOwner)
@@ -155,7 +166,7 @@ describe("Admin Blueprint Tests", function () {
         0,
         0,
         0,
-        feeRecipients
+        feesInput
       );
     let randomSeed = "randomSeedHash";
     await expect(blueprint.revealBlueprintSeed(0, randomSeed))

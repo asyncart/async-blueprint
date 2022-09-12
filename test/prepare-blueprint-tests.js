@@ -11,11 +11,16 @@ const testUri = "https://randomUri/";
 const testHash = "fbejgnvnveorjgnt";
 const tenThousandPieces = 10000;
 const zero = BigNumber.from(0).toString();
-const emptyFeeRecipients = {
+const emptyFeesInput = {
   primaryFeeBPS: [],
-  secondaryFeeBPS: [],
   primaryFeeRecipients: [],
-  secondaryFeeRecipients: []
+  secondaryFeesInput: {
+    secondaryFeeRecipients: [],
+    secondaryFeeMPS: [],
+    totalRoyaltyCutBPS: 0,
+    royaltyRecipient: zeroAddress
+  },
+  deploySplit: false
 }
 
 function hashToken(account, quantity) {
@@ -38,24 +43,35 @@ describe("Prepare Blueprint", function () {
   });
   describe("A: Blueprint prepation tests", function () {
     let Blueprint;
+    let SplitMain;
+    let splitMain; 
     let blueprint;
-    let feeRecipients = {
+    let feesInput = {
       primaryFeeBPS: [],
-      secondaryFeeBPS: [],
       primaryFeeRecipients: [],
-      secondaryFeeRecipients: []
+      secondaryFeesInput: {
+        secondaryFeeRecipients: [],
+        secondaryFeeMPS: [],
+        totalRoyaltyCutBPS: 1000,
+        royaltyRecipient: zeroAddress
+      },
+      deploySplit: false
     }
 
     beforeEach(async function () {
       [ContractOwner, user1, user2, user3, testArtist, testPlatform] =
         await ethers.getSigners();
 
-      feeRecipients.primaryFeeRecipients = [ContractOwner.address, testArtist.address];
-      feeRecipients.primaryFeeBPS = [1000, 9000];
+      feesInput.primaryFeeRecipients = [ContractOwner.address, testArtist.address];
+      feesInput.primaryFeeBPS = [1000, 9000];
+      feesInput.secondaryFeesInput.secondaryFeeRecipients = [ContractOwner.address, testArtist.address];
+      feesInput.secondaryFeesInput.secondaryFeeMPS = [100000, 900000]    
 
       Blueprint = await ethers.getContractFactory("BlueprintV12");
       blueprint = await Blueprint.deploy();
-      blueprint.initialize("Async Blueprint", "ABP", ContractOwner.address, ContractOwner.address);
+      SplitMain = await ethers.getContractFactory("SplitMain");
+      splitMain = await SplitMain.deploy();
+      blueprint.initialize("Async Blueprint", "ABP", ContractOwner.address, ContractOwner.address, splitMain.address);
     });
     it("1: should prepare the blueprint", async function () {
       await blueprint
@@ -72,7 +88,7 @@ describe("Prepare Blueprint", function () {
           0,
           0,
           BigNumber.from(0),
-          feeRecipients
+          feesInput
         );
 
       let result = await blueprint.blueprints(0);
@@ -104,7 +120,7 @@ describe("Prepare Blueprint", function () {
             0,
             0,
             BigNumber.from(1),
-            emptyFeeRecipients
+            emptyFeesInput
           )
       ).to.be.revertedWith("Sale ended");
     });
@@ -124,7 +140,7 @@ describe("Prepare Blueprint", function () {
           0,
           0,
           BigNumber.from(saleEndTimestamp),
-          emptyFeeRecipients
+          emptyFeesInput
         )
       let result = await blueprint.blueprints(0);
       expect(result.saleEndTimestamp.toString()).to.be.equal(saleEndTimestamp.toString());
@@ -144,7 +160,7 @@ describe("Prepare Blueprint", function () {
           0,
           0,
           BigNumber.from(0),
-          emptyFeeRecipients
+          emptyFeesInput
         );
       let result = await blueprint.blueprints(0);
       await expect(result.artist).to.be.equal(testArtist.address);
@@ -165,14 +181,14 @@ describe("Prepare Blueprint", function () {
           0,
           0,
           BigNumber.from(0),
-          emptyFeeRecipients
+          emptyFeesInput
         );
         
       await expect(
         blueprint
           .connect(ContractOwner)
-          .setFeeRecipients(0, { ...feeRecipients, primaryFeeRecipients: misFeeRecips })
-      ).to.be.revertedWith("fee data invalid");
+          .setFeeRecipients(0, { ...feesInput, primaryFeeRecipients: misFeeRecips })
+      ).to.be.revertedWith("invalid");
     });
     it("should not allow fee bps to exceed 10000", async function () {
       let mismatchBps = [5000, 6000];
@@ -190,13 +206,13 @@ describe("Prepare Blueprint", function () {
           0,
           0,
           BigNumber.from(0),
-          emptyFeeRecipients
+          emptyFeesInput
         );
       await expect(
         blueprint
           .connect(ContractOwner)
-          .setFeeRecipients(0, { ...feeRecipients, primaryFeeBPS: mismatchBps })
-      ).to.be.revertedWith("fee bps too big");
+          .setFeeRecipients(0, { ...feesInput, primaryFeeBPS: mismatchBps })
+      ).to.be.revertedWith("bps over");
     });
     it("should not allow sale for unprepared blueprint", async function () {
       await expect(

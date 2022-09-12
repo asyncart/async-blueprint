@@ -49,27 +49,38 @@ describe("ERC20 interactions", function () {
   });
   describe("A: Basic Blueprint Sale ERC20 Tests", function () {
     let Blueprint;
+    let SplitMain;
+    let splitMain; 
     let blueprint;
 
     let Erc20;
     let erc20;
 
-    let feeRecipients = {
+    let feesInput = {
       primaryFeeBPS: [],
-      secondaryFeeBPS: [],
       primaryFeeRecipients: [],
-      secondaryFeeRecipients: []
+      secondaryFeesInput: {
+        secondaryFeeRecipients: [],
+        secondaryFeeMPS: [],
+        totalRoyaltyCutBPS: 1000,
+        royaltyRecipient: zeroAddress
+      },
+      deploySplit: false
     }
 
     beforeEach(async function () {
       [ContractOwner, user1, user2, user3, testArtist, testPlatform] =
         await ethers.getSigners();
 
-      feeRecipients.primaryFeeRecipients = [ContractOwner.address, testArtist.address];
-      feeRecipients.primaryFeeBPS = [1000, 9000];
+      feesInput.primaryFeeRecipients = [ContractOwner.address, testArtist.address];
+      feesInput.primaryFeeBPS = [1000, 9000];
+      feesInput.secondaryFeesInput.secondaryFeeRecipients = [ContractOwner.address, testArtist.address];
+      feesInput.secondaryFeesInput.secondaryFeeMPS = [100000, 900000]
 
       Blueprint = await ethers.getContractFactory("BlueprintV12");
       blueprint = await Blueprint.deploy();
+      SplitMain = await ethers.getContractFactory("SplitMain");
+      splitMain = await SplitMain.deploy();
 
       Erc20 = await ethers.getContractFactory("ERC20MockContract");
       erc20 = await Erc20.deploy("mock erc20", "mrc");
@@ -82,7 +93,7 @@ describe("ERC20 interactions", function () {
 
       await erc20.connect(user1).approve(blueprint.address, oneThousandTokens);
 
-      blueprint.initialize("Async Blueprint", "ABP", ContractOwner.address, ContractOwner.address);
+      blueprint.initialize("Async Blueprint", "ABP", ContractOwner.address, ContractOwner.address, splitMain.address);
       await blueprint
         .connect(ContractOwner)
         .prepareBlueprint(
@@ -97,7 +108,7 @@ describe("ERC20 interactions", function () {
           0,
           0,
           0,
-          feeRecipients
+          feesInput
         );
       await blueprint.connect(ContractOwner).beginSale(0);
     });
@@ -137,11 +148,11 @@ describe("ERC20 interactions", function () {
           0,
           0,
           0,
-          feeRecipients
+          feesInput
         );
       await expect(
         blueprint.connect(ContractOwner).pauseSale(1)
-      ).to.be.revertedWith("Not ongoing");
+      ).to.be.revertedWith("!ongoing");
     });
     it("5: should allow users to purchase blueprints", async function () {
       await blueprint
@@ -201,12 +212,12 @@ describe("ERC20 interactions", function () {
               fiveHundredEth.add(oneEth),
               []
             )
-        ).to.be.revertedWith("quantity too big");
+        ).to.be.revertedWith("quantity >");
       });
       it("4: should not allow sale for less than price", async function () {
         await expect(
           blueprint.connect(user2).purchaseBlueprints(0, tenPieces, tenPieces, oneEth, [])
-        ).to.be.revertedWith("incorrect payment amount");
+        ).to.be.revertedWith("$ != expected");
       });
     });
   });
