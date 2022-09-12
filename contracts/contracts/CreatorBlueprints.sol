@@ -542,7 +542,7 @@ contract CreatorBlueprints is
     /**
      * @dev Update a blueprint's capacity 
      * @param _newCapacity New capacity
-     * @param _newLatestErc721Index Newly adjusted last ERC721 token id 
+     * @param _newLatestErc721TokenIndex Newly adjusted last ERC721 token id 
      */
     function updateBlueprintCapacity (
         uint64 _newCapacity,
@@ -952,7 +952,7 @@ contract CreatorBlueprints is
 
     /**
      * @dev Update royalty config
-     * @param _roayltyParameters New royalty parameters
+     * @param _royaltyParameters New royalty parameters
      */  
     function updateRoyaltyParameters(RoyaltyParameters calldata _royaltyParameters) 
         external
@@ -1134,7 +1134,8 @@ contract CreatorBlueprints is
      * @dev Support ERC-2981
      * @param _tokenId ID of token to return royalty for
      * @param _salePrice Price that NFT was sold at
-     * @return (reciver, royaltyAmount) Returns amount to send to royalty split
+     * @return receiver Royalty split
+     * @return royaltyAmount Amount to send to royalty split
      */
     function royaltyInfo(
         uint256 _tokenId,

@@ -1,9 +1,10 @@
 const { task } = require("hardhat/config");
+const { BigNumber } = require("ethers");
 
 const BlueprintsFactory = require("../../artifacts/contracts/contracts/deployment/BlueprintsFactory.sol/BlueprintsFactory.json");
 const BlueprintsFactoryABI = BlueprintsFactory.abi; 
 
-task("deployRoyaltySplitterAndPrepareCreatorBlueprints", "Deploys royalty splitter and creator blueprint contract. Does not upload contract metadata. Sets default primary fee values")
+task("deployRoyaltySplitterAndPrepareCreatorBlueprints", "Deploys royalty splitter and creator blueprint contract. Does not upload contract metadata. Sets default primary fee values, default royalty values.")
   .addParam("blueprintsFactory", "Blueprints factory address")
   .addParam("name", "Name of CreatorBlueprints contract")
   .addParam("symbol", "Symbol of CreatorBlueprints contract")
@@ -23,7 +24,13 @@ task("deployRoyaltySplitterAndPrepareCreatorBlueprints", "Deploys royalty splitt
     const signers = await ethers.getSigners();
     const blueprintsFactory = new ethers.Contract(taskArgs.blueprintsFactory, BlueprintsFactoryABI, signers[0]); 
 
-    console.log(`Predicted split address to put into metadata: ${await blueprintsFactory.predictBlueprintsRoyaltiesSplitAddress(taskArgs.artist)}`)
+    const admins = await blueprintsFactory.defaultCreatorBlueprintsAdmins();
+    const platform = admins[0]; 
+
+    console.log(`Predicted split address to put into metadata: ${await blueprintsFactory.predictBlueprintsRoyaltiesSplitAddress(
+        sortedAddressArray([platform, taskArgs.artist]),
+        [250000, 750000])
+    }`)
 
     const tx = await blueprintsFactory.deployRoyaltySplitterAndPrepareCreatorBlueprints(
         [
@@ -48,6 +55,8 @@ task("deployRoyaltySplitterAndPrepareCreatorBlueprints", "Deploys royalty splitt
                 []
             ]
         ],
+        sortedAddressArray([platform, taskArgs.artist]),
+        [250000, 750000],
         1000
     )
 
@@ -59,3 +68,12 @@ task("deployRoyaltySplitterAndPrepareCreatorBlueprints", "Deploys royalty splitt
 
     console.log(`CreatorBlueprints deployed to: ${creatorBlueprint}, corresponding royalty split deployed to: ${royaltySplit}`)
   });
+
+function sortedAddressArray(addresses) {
+    // assuming 2 values 
+    if (BigNumber.from(addresses[0]).gte(BigNumber.from(addresses[1]))) {
+        console.log("switch")
+        return [addresses[1], addresses[0]];
+    } 
+    return addresses;
+}

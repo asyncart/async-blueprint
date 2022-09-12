@@ -19,7 +19,7 @@ contract BlueprintsFactory is Ownable {
      * @dev Emitted when contract is deployed, exposing Async Art system contracts deployed in the process
      * @param creatorBlueprintsImplementation Address of deployed CreatorBlueprints implementation used in beacon upgradability 
      * @param beacon Address of deployed beacon used in beacon upgradibility 
-     * @param blueprintV12Implemenation Address of deployed global BlueprintV12 implementation 
+     * @param blueprintV12Implementation Address of deployed global BlueprintV12 implementation 
      * @param globalBlueprints Address of BlueprintV12 (proxy)
      */
     event FactoryDeployed(
@@ -60,6 +60,7 @@ contract BlueprintsFactory is Ownable {
      * @param globalBlueprintsUpgrader Account able to upgrade global BlueprintV12
      * @param globalBlueprintsName Name of BlueprintV12 contract
      * @param globalBlueprintsSymbol Symbol of BlueprintV12 contract 
+     * @param globalBlueprintsMinter Minter on BlueprintV12 instance
      * @param creatorBlueprintsMinter Initial default address assigned MINTER_ROLE on CreatorBlueprints instances
      * @param _platform Address given DEFAULT_ADMIN role on BlueprintV12 and set as initial default address assigned DEFAULT_ADMIN role on CreatorBlueprints instances
      * @param splitMain Royalty manager

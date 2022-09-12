@@ -568,7 +568,7 @@ contract BlueprintV12 is
      * @dev Update a blueprint's capacity
      * @param _blueprintID Blueprint ID 
      * @param _newCapacity New capacity
-     * @param _newLatestErc721Index Newly adjusted last ERC721 token id 
+     * @param _newLatestErc721TokenIndex Newly adjusted last ERC721 token id 
      */
     function updateBlueprintCapacity (
         uint256 _blueprintID,
