@@ -228,26 +228,6 @@ contract CreatorBlueprints is
     );
 
     /**
-     * @dev Emitted when blueprint settings are updated
-     * @param price Price for NFTs on blueprint
-     * @param newMintAmountArtist New mintAmountArtist
-     * @param newMintAmountPlatform New mintAmountPlatform
-     * @param newSaleState New saleState
-     * @param newMaxPurchaseAmount New maxPurchaseAmount
-     * @param saleEndTimestamp Timestamp denoting when sale ends
-     * @param newMerkleRoot New root of merkle tree allowlist
-     */ 
-    event BlueprintSettingsUpdated(
-        uint128 price,
-        uint32 newMintAmountArtist,
-        uint32 newMintAmountPlatform,
-        uint32 newSaleState,
-        uint64 newMaxPurchaseAmount,
-        uint128 saleEndTimestamp,
-        bytes32 newMerkleRoot
-    );
-
-    /**
      * @dev Emitted when blueprint sale is started
      */
     event SaleStarted();
