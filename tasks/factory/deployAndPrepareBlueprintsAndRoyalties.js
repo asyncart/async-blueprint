@@ -1,8 +1,179 @@
 const { task } = require("hardhat/config");
 const { BigNumber } = require("ethers");
 
-const BlueprintsFactory = require("../../artifacts/contracts/contracts/deployment/BlueprintsFactory.sol/BlueprintsFactory.json");
-const BlueprintsFactoryABI = BlueprintsFactory.abi; 
+const BlueprintsFactoryABI = [
+    {
+        "inputs": [],
+        "name": "defaultCreatorBlueprintsAdmins",
+        "outputs": [
+          {
+            "internalType": "address",
+            "name": "platform",
+            "type": "address"
+          },
+          {
+            "internalType": "address",
+            "name": "minter",
+            "type": "address"
+          },
+          {
+            "internalType": "address",
+            "name": "asyncSaleFeesRecipient",
+            "type": "address"
+          }
+        ],
+        "stateMutability": "view",
+        "type": "function"
+      },
+      {
+        "inputs": [
+          {
+            "internalType": "address[]",
+            "name": "royaltyRecipients",
+            "type": "address[]"
+          },
+          {
+            "internalType": "uint32[]",
+            "name": "allocations",
+            "type": "uint32[]"
+          }
+        ],
+        "name": "predictBlueprintsRoyaltiesSplitAddress",
+        "outputs": [
+          {
+            "internalType": "address",
+            "name": "",
+            "type": "address"
+          }
+        ],
+        "stateMutability": "view",
+        "type": "function"
+      },
+      {
+        "inputs": [
+          {
+            "components": [
+              {
+                "internalType": "string",
+                "name": "name",
+                "type": "string"
+              },
+              {
+                "internalType": "string",
+                "name": "symbol",
+                "type": "string"
+              },
+              {
+                "internalType": "string",
+                "name": "contractURI",
+                "type": "string"
+              },
+              {
+                "internalType": "address",
+                "name": "artist",
+                "type": "address"
+              }
+            ],
+            "internalType": "struct CreatorBlueprints.CreatorBlueprintsInput",
+            "name": "creatorBlueprintsInput",
+            "type": "tuple"
+          },
+          {
+            "components": [
+              {
+                "internalType": "uint64",
+                "name": "_capacity",
+                "type": "uint64"
+              },
+              {
+                "internalType": "uint128",
+                "name": "_price",
+                "type": "uint128"
+              },
+              {
+                "internalType": "address",
+                "name": "_erc20Token",
+                "type": "address"
+              },
+              {
+                "internalType": "string",
+                "name": "_blueprintMetaData",
+                "type": "string"
+              },
+              {
+                "internalType": "string",
+                "name": "_baseTokenUri",
+                "type": "string"
+              },
+              {
+                "internalType": "bytes32",
+                "name": "_merkleroot",
+                "type": "bytes32"
+              },
+              {
+                "internalType": "uint32",
+                "name": "_mintAmountArtist",
+                "type": "uint32"
+              },
+              {
+                "internalType": "uint32",
+                "name": "_mintAmountPlatform",
+                "type": "uint32"
+              },
+              {
+                "internalType": "uint64",
+                "name": "_maxPurchaseAmount",
+                "type": "uint64"
+              },
+              {
+                "internalType": "uint128",
+                "name": "_saleEndTimestamp",
+                "type": "uint128"
+              },
+              {
+                "components": [
+                  {
+                    "internalType": "uint32[]",
+                    "name": "primaryFeeBPS",
+                    "type": "uint32[]"
+                  },
+                  {
+                    "internalType": "address[]",
+                    "name": "primaryFeeRecipients",
+                    "type": "address[]"
+                  }
+                ],
+                "internalType": "struct CreatorBlueprints.Fees",
+                "name": "_feeRecipientInfo",
+                "type": "tuple"
+              }
+            ],
+            "internalType": "struct CreatorBlueprints.BlueprintPreparationConfig",
+            "name": "blueprintPreparationConfig",
+            "type": "tuple"
+          },
+          {
+            "internalType": "address[]",
+            "name": "royaltyRecipients",
+            "type": "address[]"
+          },
+          {
+            "internalType": "uint32[]",
+            "name": "allocations",
+            "type": "uint32[]"
+          },
+          {
+            "internalType": "uint32",
+            "name": "royaltyCutBPS",
+            "type": "uint32"
+          }
+        ],
+        "name": "deployRoyaltySplitterAndPrepareCreatorBlueprints",
+        "outputs": [],
+        "stateMutability": "nonpayable",
+        "type": "function"
+      }
+]
 
 task("deployRoyaltySplitterAndPrepareCreatorBlueprints", "Deploys royalty splitter and creator blueprint contract. Does not upload contract metadata. Sets default primary fee values, default royalty values.")
   .addParam("blueprintsFactory", "Blueprints factory address")
@@ -29,8 +200,8 @@ task("deployRoyaltySplitterAndPrepareCreatorBlueprints", "Deploys royalty splitt
 
     console.log(`Predicted split address to put into metadata: ${await blueprintsFactory.predictBlueprintsRoyaltiesSplitAddress(
         sortedAddressArray([platform, taskArgs.artist]),
-        [250000, 750000])
-    }`)
+        [250000, 750000]
+    )}`)
 
     const tx = await blueprintsFactory.deployRoyaltySplitterAndPrepareCreatorBlueprints(
         [
@@ -72,7 +243,6 @@ task("deployRoyaltySplitterAndPrepareCreatorBlueprints", "Deploys royalty splitt
 function sortedAddressArray(addresses) {
     // assuming 2 values 
     if (BigNumber.from(addresses[0]).gte(BigNumber.from(addresses[1]))) {
-        console.log("switch")
         return [addresses[1], addresses[0]];
     } 
     return addresses;
