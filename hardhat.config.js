@@ -12,7 +12,7 @@ const {
   alchemyUrl,
   etherscanApiKey,
   coinmarketCapKey,
-} = require("./secretsManager.js");
+} = require("./secretsManager.example.js");
 
 require("./tasks/deploy");
 require("./tasks/factory")
