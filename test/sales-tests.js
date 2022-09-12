@@ -12,11 +12,16 @@ const testUri = "https://randomUri/";
 const testHash = "fbejgnvnveorjgnt";
 const oneThousandPieces = 1000;
 const tenPieces = 10;
-const emptyFeeRecipients = {
+const emptyFeesInput = {
   primaryFeeBPS: [],
-  secondaryFeeBPS: [],
   primaryFeeRecipients: [],
-  secondaryFeeRecipients: []
+  secondaryFeesInput: {
+    secondaryFeeRecipients: [],
+    secondaryFeeMPS: [],
+    totalRoyaltyCutBPS: 0,
+    royaltyRecipient: zeroAddress
+  },
+  deploySplit: false
 }
 
 const sale_started = BigNumber.from(2).toString();
@@ -33,12 +38,18 @@ function hashToken(account, quantity) {
 
 describe("Blueprint Sales", function () {
 
-  let feeRecipients = {
+  let feesInput = {
     primaryFeeBPS: [],
-    secondaryFeeBPS: [],
     primaryFeeRecipients: [],
-    secondaryFeeRecipients: []
+    secondaryFeesInput: {
+      secondaryFeeRecipients: [],
+      secondaryFeeMPS: [],
+      totalRoyaltyCutBPS: 1000,
+      royaltyRecipient: zeroAddress
+    },
+    deploySplit: false
   }
+
 
   before(async function () {
     this.accounts = await ethers.getSigners();
@@ -50,18 +61,24 @@ describe("Blueprint Sales", function () {
   });
   describe("A: Basic Blueprint sale tests", function () {
     let Blueprint;
+    let SplitMain;
+    let splitMain;
     let blueprint;
 
     beforeEach(async function () {
       [ContractOwner, user1, user2, user3, testArtist, testPlatform] =
         await ethers.getSigners();
 
-      feeRecipients.primaryFeeRecipients = [ContractOwner.address, testArtist.address];
-      feeRecipients.primaryFeeBPS = [1000, 9000];
+      feesInput.primaryFeeRecipients = [ContractOwner.address, testArtist.address];
+      feesInput.primaryFeeBPS = [1000, 9000];
+      feesInput.secondaryFeesInput.secondaryFeeRecipients = [ContractOwner.address, testArtist.address];
+      feesInput.secondaryFeesInput.secondaryFeeMPS = [100000, 900000]    
 
       Blueprint = await ethers.getContractFactory("BlueprintV12");
       blueprint = await Blueprint.deploy();
-      blueprint.initialize("Async Blueprint", "ABP", ContractOwner.address, ContractOwner.address);
+      SplitMain = await ethers.getContractFactory("SplitMain");
+      splitMain = await SplitMain.deploy();
+      blueprint.initialize("Async Blueprint", "ABP", ContractOwner.address, ContractOwner.address, splitMain.address);
       await blueprint
         .connect(ContractOwner)
         .prepareBlueprint(
@@ -76,7 +93,7 @@ describe("Blueprint Sales", function () {
           0,
           0,
           0,
-          feeRecipients
+          feesInput
         );
       await blueprint.connect(ContractOwner).beginSale(0);
     });
@@ -96,7 +113,7 @@ describe("Blueprint Sales", function () {
       expect(result.saleState.toString()).to.be.equal(sale_paused);
       await expect(
         blueprint.connect(ContractOwner).pauseSale(0)
-      ).to.be.revertedWith("Not ongoing");
+      ).to.be.revertedWith("!ongoing");
     });
     it("3: should allow for unpausing of paused sale", async function () {
       await blueprint.connect(ContractOwner).pauseSale(0);
@@ -122,11 +139,11 @@ describe("Blueprint Sales", function () {
           0,
           0,
           0,
-          emptyFeeRecipients
+          emptyFeesInput
         );
       await expect(
         blueprint.connect(ContractOwner).pauseSale(1)
-      ).to.be.revertedWith("Not ongoing");
+      ).to.be.revertedWith("!ongoing");
     });
     it("5: should allow users to purchase blueprints", async function () {
       let blueprintValue = BigNumber.from(tenPieces).mul(oneEth);
@@ -200,7 +217,7 @@ describe("Blueprint Sales", function () {
               [],
               { value: fiveHundredEth.add(oneEth) }
             )
-        ).to.be.revertedWith("quantity too big");
+        ).to.be.revertedWith("quantity >");
       });
       it("5: should default fees if none provided", async function () {
         await blueprint
@@ -217,7 +234,7 @@ describe("Blueprint Sales", function () {
             0,
             0,
             0,
-            emptyFeeRecipients
+            emptyFeesInput
           );
         await blueprint.connect(ContractOwner).beginSale(1);
         await blueprint.setAsyncFeeRecipient(testPlatform.address);
@@ -255,18 +272,24 @@ describe("Blueprint Sales", function () {
   });
   describe("C: Expired timestamp sales tests", function () {
     let Blueprint;
+    let SplitMain;
+    let splitMain;
     let blueprint;
 
     beforeEach(async function () {
       [ContractOwner, user1, user2, user3, testArtist, testPlatform] =
         await ethers.getSigners();
 
-      feeRecipients.primaryFeeRecipients = [ContractOwner.address, testArtist.address];
-      feeRecipients.primaryFeeBPS = [1000, 9000];
+      feesInput.primaryFeeRecipients = [ContractOwner.address, testArtist.address];
+      feesInput.primaryFeeBPS = [1000, 9000];
+      feesInput.secondaryFeesInput.secondaryFeeRecipients = [ContractOwner.address, testArtist.address];
+      feesInput.secondaryFeesInput.secondaryFeeMPS = [100000, 900000]    
 
       Blueprint = await ethers.getContractFactory("BlueprintV12");
       blueprint = await Blueprint.deploy();
-      blueprint.initialize("Async Blueprint", "ABP", ContractOwner.address, ContractOwner.address);
+      SplitMain = await ethers.getContractFactory("SplitMain");
+      splitMain = await SplitMain.deploy();
+      blueprint.initialize("Async Blueprint", "ABP", ContractOwner.address, ContractOwner.address, splitMain.address);
       const latestBlock = await ethers.provider.getBlockNumber();
       const latestBlocktimestamp = (await ethers.provider.getBlock(latestBlock)).timestamp
       const nextBlockTimestamp = latestBlocktimestamp + 15
@@ -285,7 +308,7 @@ describe("Blueprint Sales", function () {
           0,
           0,
           BigNumber.from(nextBlockTimestamp).add(10),
-          feeRecipients
+          feesInput
         );
       await blueprint.connect(ContractOwner).beginSale(0);
     });

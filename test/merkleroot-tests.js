@@ -12,9 +12,14 @@ const tenThousandPieces = 10000;
 const zero = BigNumber.from(0).toString();
 const emptyFeeRecipients = {
   primaryFeeBPS: [],
-  secondaryFeeBPS: [],
   primaryFeeRecipients: [],
-  secondaryFeeRecipients: []
+  secondaryFeesInput: {
+    secondaryFeeRecipients: [],
+    secondaryFeeMPS: [],
+    totalRoyaltyCutBPS: 0,
+    royaltyRecipient: zeroAddress
+  },
+  deploySplit: false
 }
 
 const tenPieces = 10;
@@ -60,22 +65,34 @@ describe("Merkleroot Tests", function () {
 
   describe("A: Mint all whitelisted", function () {
     let Blueprint;
+    let SplitMain;
+    let splitMain; 
     let blueprint;
-    let feeRecipients = {
+    let feesInput = {
       primaryFeeBPS: [],
-      secondaryFeeBPS: [],
       primaryFeeRecipients: [],
-      secondaryFeeRecipients: []
+      secondaryFeesInput: {
+        secondaryFeeRecipients: [],
+        secondaryFeeMPS: [],
+        totalRoyaltyCutBPS: 1000,
+        royaltyRecipient: zeroAddress
+      },
+      deploySplit: false
     }
     before(async function () {
       [ContractOwner, user1, user2, user3, testArtist, testPlatform] =
         await ethers.getSigners();
 
-      feeRecipients.primaryFeeRecipients = [ContractOwner.address, testArtist.address];
-      feeRecipients.primaryFeeBPS = [1000, 9000];
+      feesInput.primaryFeeRecipients = [ContractOwner.address, testArtist.address];
+      feesInput.primaryFeeBPS = [1000, 9000];
+      feesInput.secondaryFeesInput.secondaryFeeRecipients = [ContractOwner.address, testArtist.address];
+      feesInput.secondaryFeesInput.secondaryFeeMPS = [100000, 900000]    
+      
       Blueprint = await ethers.getContractFactory("BlueprintV12");
       blueprint = await Blueprint.deploy();
-      blueprint.initialize("Async Blueprint", "ABP", ContractOwner.address, ContractOwner.address);
+      SplitMain = await ethers.getContractFactory("SplitMain");
+      splitMain = await SplitMain.deploy();
+      blueprint.initialize("Async Blueprint", "ABP", ContractOwner.address, ContractOwner.address, splitMain.address);
       await blueprint
         .connect(ContractOwner)
         .prepareBlueprint(
@@ -90,7 +107,7 @@ describe("Merkleroot Tests", function () {
           0,
           0,
           0,
-          feeRecipients
+          feesInput
         );
     });
     it("1: should not allow non whitelisted user", async function () {
