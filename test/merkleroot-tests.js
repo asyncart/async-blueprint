@@ -92,21 +92,23 @@ describe("Merkleroot Tests", function () {
       blueprint = await Blueprint.deploy();
       SplitMain = await ethers.getContractFactory("SplitMain");
       splitMain = await SplitMain.deploy();
-      blueprint.initialize("Async Blueprint", "ABP", ContractOwner.address, ContractOwner.address, splitMain.address);
+      blueprint.initialize("Async Blueprint", "ABP", [ContractOwner.address, ContractOwner.address, ContractOwner.address], splitMain.address);
       await blueprint
         .connect(ContractOwner)
         .prepareBlueprint(
           testArtist.address,
-          tenThousandPieces,
-          oneEth,
-          zeroAddress,
-          testHash,
-          testUri,
-          this.merkleTree.getHexRoot(),
-          0,
-          0,
-          0,
-          0,
+          [
+            tenThousandPieces,
+            oneEth,
+            zeroAddress,
+            testHash,
+            testUri,
+            this.merkleTree.getHexRoot(),
+            0,
+            0,
+            0,
+            0
+          ],
           feesInput
         );
     });
@@ -123,16 +125,18 @@ describe("Merkleroot Tests", function () {
         .connect(ContractOwner)
         .prepareBlueprint(
           user3.address,
-          tenThousandPieces,
-          oneEth.div(2),
-          zeroAddress,
-          testHash,
-          testUri,
-          "0x0000000000000000000000000000000000000000000000000000000000000000",
-          0,
-          0,
-          0,
-          0,
+          [
+            tenThousandPieces,
+            oneEth.div(2),
+            zeroAddress,
+            testHash,
+            testUri,
+            "0x0000000000000000000000000000000000000000000000000000000000000000",
+            0,
+            0,
+            0,
+            0
+          ],
           emptyFeeRecipients
         );
 

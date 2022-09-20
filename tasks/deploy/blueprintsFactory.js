@@ -1,10 +1,8 @@
 const { task } = require("hardhat/config");
 
 task("deploy:blueprintsFactory", "Deploys Blueprints factory")
-  .addParam("beaconUpgrader", "Account that can upgrade creatorBlueprints beacon implementation")
-  .addParam("blueprintV12UpgraderAdmin", "Account that is admin of blueprintV12 upgrade proxy")
-  .addParam("blueprintV12Name", "Name of Blueprintv12 contract")
-  .addParam("blueprintV12Symbol", "Symbol of Blueprintv12 contract")
+  .addParam("creatorBlueprintsUpgrader", "Account that can upgrade CreatorBlueprints beacon implementation")
+  .addParam("blueprintV12Upgrader", "Account that can upgrade BlueprintV12 beacon implementation")
   .addParam("blueprintV12Minter", "Permissioned minter for BlueprintV12")
   .addParam("creatorBlueprintsMinter", "Default permissioned minter for CreatorBlueprints")
   .addParam("platform", "Default DEFAULT_ADMIN_ROLE / platform address holder for CreatorBlueprints")
@@ -13,10 +11,8 @@ task("deploy:blueprintsFactory", "Deploys Blueprints factory")
   .setAction(async (taskArgs, { ethers }) => {
     const BlueprintsFactory = await ethers.getContractFactory("BlueprintsFactory");
     const blueprintsFactory = await BlueprintsFactory.deploy(
-        taskArgs.beaconUpgrader,
-        taskArgs.blueprintV12UpgraderAdmin,
-        taskArgs.blueprintV12Name,
-        taskArgs.blueprintV12Symbol,
+        taskArgs.creatorBlueprintsUpgrader,
+        taskArgs.blueprintV12Upgrader,
         taskArgs.blueprintV12Minter,
         taskArgs.creatorBlueprintsMinter, 
         taskArgs.platform,

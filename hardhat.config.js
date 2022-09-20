@@ -8,7 +8,6 @@ require("@openzeppelin/hardhat-upgrades");
 require('hardhat-contract-sizer');
 
 const {
-  rinkebyPrivateKey,
   alchemyUrl,
   etherscanApiKey,
   coinmarketCapKey,
@@ -16,6 +15,7 @@ const {
 
 require("./tasks/deploy");
 require("./tasks/factory")
+require("./tasks/royalties");
 
 module.exports = {
   solidity: {

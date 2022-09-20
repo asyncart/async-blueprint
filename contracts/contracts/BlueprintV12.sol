@@ -3,6 +3,7 @@ pragma solidity 0.8.4;
 
 import "./abstract/HasSecondarySaleFees.sol";
 import "./royalties/interfaces/ISplitMain.sol";
+import "./common/IBlueprintTypes.sol";
 import "@openzeppelin/contracts-upgradeable/token/ERC721/ERC721Upgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/access/AccessControlEnumerableUpgradeable.sol";
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
@@ -275,7 +276,7 @@ contract BlueprintV12 is
             _isSaleOngoing(_blueprintID) ||
             // Must be presale and a whitelisted user
             (_isBlueprintPreparedAndNotStarted(_blueprintID) && proof.length != 0 && _verify(_leaf(msg.sender, uint256(_whitelistedQuantity)), blueprints[_blueprintID].merkleroot, proof)),
-            "purchase unavailable"
+            "unavailable"
         );
         _;
     }
@@ -303,7 +304,7 @@ contract BlueprintV12 is
     modifier isSaleEndTimestampCurrentlyValid(
         uint128 _saleEndTimestamp
     ) {
-        require(_isSaleEndTimestampCurrentlyValid(_saleEndTimestamp), "Sale ended");
+        require(_isSaleEndTimestampCurrentlyValid(_saleEndTimestamp), "ended");
         _;
     }
 
@@ -311,15 +312,13 @@ contract BlueprintV12 is
      * @dev Initialize the implementation 
      * @param name_ Contract name
      * @param symbol_ Contract symbol
-     * @param minter Account to receive minter privileges
-     * @param _platform Account to receive DEFAULT_ADMIN role privileges 
+     * @param blueprintV12Admins Administrative accounts  
      * @param splitMain Royalty manager
      */
     function initialize(
         string memory name_,
         string memory symbol_,
-        address minter,
-        address _platform,
+        IBlueprintTypes.Admins calldata blueprintV12Admins,
         address splitMain
     ) public initializer {
         // Intialize parent contracts
@@ -327,18 +326,18 @@ contract BlueprintV12 is
         HasSecondarySaleFees._initialize();
         AccessControlUpgradeable.__AccessControl_init();
 
-        _setupRole(DEFAULT_ADMIN_ROLE, _platform);
-        _setupRole(MINTER_ROLE, minter);
+        _setupRole(DEFAULT_ADMIN_ROLE, blueprintV12Admins.platform);
+        _setupRole(MINTER_ROLE, blueprintV12Admins.minter);
 
-        platform = _platform;
-        minterAddress = minter;
+        platform = blueprintV12Admins.platform;
+        minterAddress = blueprintV12Admins.minter;
 
         defaultPlatformPrimaryFeePercentage = 2000; // 20%
 
         defaultBlueprintSecondarySalePercentage = 750; // 7.5%
         defaultPlatformSecondarySalePercentage = 250; // 2.5%
 
-        asyncSaleFeesRecipient = _platform;
+        asyncSaleFeesRecipient = blueprintV12Admins.asyncSaleFeesRecipient;
         _splitMain = splitMain;
     }
 
@@ -395,7 +394,7 @@ contract BlueprintV12 is
         for (uint256 i; i < _feeBPS.length; i++) {
             totalPercent = totalPercent + _feeBPS[i];
         }
-        require(totalPercent <= 10000, "bps over");
+        require(totalPercent <= 10000, "bps >");
         return true;
     }
 
@@ -482,51 +481,33 @@ contract BlueprintV12 is
     /** 
      * @dev Prepare the blueprint (this is the core operation to set up a blueprint)
      * @param _artist Artist address
-     * @param _capacity Number of NFTs purchasable in this blueprint 
-     * @param _price Price per NFT 
-     * @param _erc20Token ERC20 currency 
-     * @param _blueprintMetaData Blueprint metadata uri
-     * @param _baseTokenUri Base token uri for blueprint
-     * @param _merkleroot Root of merkle tree allowlist
-     * @param _mintAmountArtist Amount that artist can mint of blueprint
-     * @param _mintAmountPlatform Amount that platform can mint of blueprint 
-     * @param _maxPurchaseAmount Max amount of NFTs purchasable in one transaction
-     * @param _saleEndTimestamp When the sale ends
+     * @param config Object containing values required to prepare blueprint
      * @param feesInput Initial primary and secondary fees config
      */ 
     function prepareBlueprint(
         address _artist,
-        uint64 _capacity,
-        uint128 _price,
-        address _erc20Token,
-        string memory _blueprintMetaData,
-        string memory _baseTokenUri,
-        bytes32 _merkleroot,
-        uint32 _mintAmountArtist,
-        uint32 _mintAmountPlatform,
-        uint64 _maxPurchaseAmount,
-        uint128 _saleEndTimestamp,
-        FeesInput memory feesInput
+        IBlueprintTypes.BlueprintPreparationConfig calldata config,
+        FeesInput calldata feesInput
     )   external 
         onlyRole(MINTER_ROLE)
     {
         uint256 _blueprintID = blueprintIndex;
         blueprints[_blueprintID].artist = _artist;
-        blueprints[_blueprintID].capacity = _capacity;
-        blueprints[_blueprintID].price = _price;
+        blueprints[_blueprintID].capacity = config._capacity;
+        blueprints[_blueprintID].price = config._price;
 
         _setupBlueprint(
             _blueprintID,
-            _erc20Token,
-            _baseTokenUri,
-            _merkleroot,
-            _mintAmountArtist,
-            _mintAmountPlatform,
-            _maxPurchaseAmount,
-            _saleEndTimestamp
+            config._erc20Token,
+            config._baseTokenUri,
+            config._merkleroot,
+            config._mintAmountArtist,
+            config._mintAmountPlatform,
+            config._maxPurchaseAmount,
+            config._saleEndTimestamp
         ); 
 
-        setBlueprintPrepared(_blueprintID, _blueprintMetaData);
+        setBlueprintPrepared(_blueprintID, config._blueprintMetaData);
         setFeeRecipients(_blueprintID, feesInput);
     }
 
@@ -553,7 +534,7 @@ contract BlueprintV12 is
         uint64 _newCapacity,
         uint64 _newLatestErc721TokenIndex
     ) external onlyRole(MINTER_ROLE) {
-        require(blueprints[_blueprintID].capacity > _newCapacity, "cap over");
+        require(blueprints[_blueprintID].capacity > _newCapacity, "cap >");
 
         blueprints[_blueprintID].capacity = _newCapacity;
 
@@ -611,7 +592,7 @@ contract BlueprintV12 is
     {
         require(
             blueprints[blueprintID].saleState == SaleState.not_started,
-            "wrong sale state"
+            "started"
         );
         blueprints[blueprintID].saleState = SaleState.started;
         emit SaleStarted(blueprintID);
@@ -637,7 +618,7 @@ contract BlueprintV12 is
     function unpauseSale(uint256 blueprintID) external onlyRole(MINTER_ROLE) isSaleEndTimestampCurrentlyValid(blueprints[blueprintID].saleEndTimestamp) {
         require(
             blueprints[blueprintID].saleState == SaleState.paused,
-            "Sale not paused"
+            "!paused"
         );
         blueprints[blueprintID].saleState = SaleState.started;
         emit SaleUnpaused(blueprintID);
@@ -685,11 +666,11 @@ contract BlueprintV12 is
         BuyerWhitelistedOrSaleStarted(blueprintID, whitelistedQuantity, proof)
         isQuantityAvailableForPurchase(blueprintID, purchaseQuantity)
     {
-        require(purchaseQuantity <= whitelistedQuantity, "over whitelisted amount");
+        require(purchaseQuantity <= whitelistedQuantity, "> whitelisted amount");
         require(
             blueprints[blueprintID].maxPurchaseAmount == 0 ||
                 purchaseQuantity <= blueprints[blueprintID].maxPurchaseAmount,
-            "over maxPurchaseAmount"
+            "> maxPurchaseAmount"
         );
 
         address artist = blueprints[blueprintID].artist;
@@ -724,11 +705,11 @@ contract BlueprintV12 is
         BuyerWhitelistedOrSaleStarted(blueprintID, whitelistedQuantity, proof)
         isQuantityAvailableForPurchase(blueprintID, purchaseQuantity)
     {
-        require(purchaseQuantity <= whitelistedQuantity, "over whitelisted amount");
+        require(purchaseQuantity <= whitelistedQuantity, "> whitelisted amount");
         require(
             blueprints[blueprintID].maxPurchaseAmount == 0 ||
                 purchaseQuantity <= blueprints[blueprintID].maxPurchaseAmount,
-            "over maxPurchaseAmount"
+            "> maxPurchaseAmount"
         );
 
         address artist = blueprints[blueprintID].artist;
@@ -757,24 +738,24 @@ contract BlueprintV12 is
     {
         require(
             _isBlueprintPreparedAndNotStarted(blueprintID) || _isSaleOngoing(blueprintID),
-            "Must be presale or public sale"
+            "not pre/public sale"
         );
         require(
             minterAddress == msg.sender ||
                 blueprints[blueprintID].artist == msg.sender,
-            "user cannot mint presale"
+            "unauthorized"
         );
 
         if (minterAddress == msg.sender) {
             require(
                 quantity <= blueprints[blueprintID].mintAmountPlatform,
-                "can't mint quantity"
+                "quantity >"
             );
             blueprints[blueprintID].mintAmountPlatform -= quantity;
         } else if (blueprints[blueprintID].artist == msg.sender) {
             require(
                 quantity <= blueprints[blueprintID].mintAmountArtist,
-                "can't mint quantity"
+                "quantity >"
             );
             blueprints[blueprintID].mintAmountArtist -= quantity;
         }
@@ -835,14 +816,14 @@ contract BlueprintV12 is
         address _erc20Token = blueprints[_blueprintID].ERC20Token;
         uint128 _price = blueprints[_blueprintID].price;
         if (_erc20Token == address(0)) {
-            require(_tokenAmount == 0, "tokenAmount not zero");
+            require(_tokenAmount == 0, "tokenAmount != 0");
             require(
                 msg.value == _quantity * _price,
                 "$ != expected"
             );
             _payFeesAndArtist(_blueprintID, _erc20Token, msg.value, _artist);
         } else {
-            require(msg.value == 0, "eth value not zero");
+            require(msg.value == 0, "eth value != 0");
             require(
                 _tokenAmount == _quantity * _price,
                 "$ != expected"
@@ -904,7 +885,7 @@ contract BlueprintV12 is
     ) external onlyRole(MINTER_ROLE) isBlueprintPrepared(blueprintID) {
         require(
             !blueprints[blueprintID].tokenUriLocked,
-            "uri locked"
+            "locked"
         );
 
         blueprints[blueprintID].baseTokenUri = newBaseTokenUri;
@@ -923,7 +904,7 @@ contract BlueprintV12 is
     {
         require(
             !blueprints[blueprintID].tokenUriLocked,
-            "uri locked"
+            "locked"
         );
 
         blueprints[blueprintID].tokenUriLocked = true;
@@ -943,7 +924,7 @@ contract BlueprintV12 is
     {
         require(
             _exists(tokenId),
-            "nonexistent token"
+            "token dne"
         );
 
         string memory baseURI = blueprints[tokenToBlueprintID[tokenId]].baseTokenUri;
@@ -1127,7 +1108,7 @@ contract BlueprintV12 is
         (bool successfulWithdraw, ) = recipient.call{value: amount, gas: 20000}(
             ""
         );
-        require(successfulWithdraw, "withdraw failed");
+        require(successfulWithdraw, "failed");
     }
 
     /**

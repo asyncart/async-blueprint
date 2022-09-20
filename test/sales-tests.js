@@ -78,21 +78,23 @@ describe("Blueprint Sales", function () {
       blueprint = await Blueprint.deploy();
       SplitMain = await ethers.getContractFactory("SplitMain");
       splitMain = await SplitMain.deploy();
-      blueprint.initialize("Async Blueprint", "ABP", ContractOwner.address, ContractOwner.address, splitMain.address);
+      blueprint.initialize("Async Blueprint", "ABP", [ContractOwner.address, ContractOwner.address, ContractOwner.address], splitMain.address);
       await blueprint
         .connect(ContractOwner)
         .prepareBlueprint(
           testArtist.address,
-          oneThousandPieces,
-          oneEth,
-          zeroAddress,
-          testHash,
-          testUri,
-          this.merkleTree.getHexRoot(),
-          0,
-          0,
-          0,
-          0,
+          [
+            oneThousandPieces,
+            oneEth,
+            zeroAddress,
+            testHash,
+            testUri,
+            this.merkleTree.getHexRoot(),
+            0,
+            0,
+            0,
+            0
+          ],
           feesInput
         );
       await blueprint.connect(ContractOwner).beginSale(0);
@@ -122,23 +124,25 @@ describe("Blueprint Sales", function () {
       expect(result.saleState.toString()).to.be.equal(sale_started);
       await expect(
         blueprint.connect(ContractOwner).unpauseSale(0)
-      ).to.be.revertedWith("Sale not paused");
+      ).to.be.revertedWith("!paused");
     });
     it("4: should not allow pausing of unstarted sale", async function () {
       await blueprint
         .connect(ContractOwner)
         .prepareBlueprint(
           user2.address,
-          oneThousandPieces,
-          oneEth,
-          zeroAddress,
-          testHash + "dsfdk",
-          testUri + "unpause_test",
-          this.merkleTree.getHexRoot(),
-          0,
-          0,
-          0,
-          0,
+          [
+            oneThousandPieces,
+            oneEth,
+            zeroAddress,
+            testHash + "dsfdk",
+            testUri + "unpause_test",
+            this.merkleTree.getHexRoot(),
+            0,
+            0,
+            0,
+            0
+          ],
           emptyFeesInput
         );
       await expect(
@@ -168,7 +172,7 @@ describe("Blueprint Sales", function () {
         blueprint
           .connect(user2)
           .purchaseBlueprints(0, tenPieces, tenPieces, 0, [], { value: blueprintValue })
-      ).to.be.revertedWith("purchase unavailable");
+      ).to.be.revertedWith("unavailable");
     });
     describe("B: Sale + purchase interactions", function () {
       it("1: should distribute fees", async function () {
@@ -195,7 +199,7 @@ describe("Blueprint Sales", function () {
           blueprint
             .connect(user2)
             .purchaseBlueprints(0, tenPieces, tenPieces, 10, [], { value: blueprintValue })
-        ).to.be.revertedWith("tokenAmount not zero");
+        ).to.be.revertedWith("tokenAmount != 0");
       });
       it("3: should not allow purchase of more than capacity", async function () {
         let fiveHundredPieces = BigNumber.from(oneThousandPieces).div(2);
@@ -224,16 +228,18 @@ describe("Blueprint Sales", function () {
           .connect(ContractOwner)
           .prepareBlueprint(
             testArtist.address,
-            oneThousandPieces,
-            oneEth,
-            zeroAddress,
-            testHash + "dsfdk",
-            testUri + "_test",
-            this.merkleTree.getHexRoot(),
-            0,
-            0,
-            0,
-            0,
+            [
+              oneThousandPieces,
+              oneEth,
+              zeroAddress,
+              testHash + "dsfdk",
+              testUri + "_test",
+              this.merkleTree.getHexRoot(),
+              0,
+              0,
+              0,
+              0
+            ],
             emptyFeesInput
           );
         await blueprint.connect(ContractOwner).beginSale(1);
@@ -289,7 +295,7 @@ describe("Blueprint Sales", function () {
       blueprint = await Blueprint.deploy();
       SplitMain = await ethers.getContractFactory("SplitMain");
       splitMain = await SplitMain.deploy();
-      blueprint.initialize("Async Blueprint", "ABP", ContractOwner.address, ContractOwner.address, splitMain.address);
+      blueprint.initialize("Async Blueprint", "ABP", [ContractOwner.address, ContractOwner.address, ContractOwner.address], splitMain.address);
       const latestBlock = await ethers.provider.getBlockNumber();
       const latestBlocktimestamp = (await ethers.provider.getBlock(latestBlock)).timestamp
       const nextBlockTimestamp = latestBlocktimestamp + 15
@@ -298,16 +304,18 @@ describe("Blueprint Sales", function () {
         .connect(ContractOwner)
         .prepareBlueprint(
           testArtist.address,
-          oneThousandPieces,
-          oneEth,
-          zeroAddress,
-          testHash,
-          testUri,
-          this.merkleTree.getHexRoot(),
-          0,
-          0,
-          0,
-          BigNumber.from(nextBlockTimestamp).add(10),
+          [
+            oneThousandPieces,
+            oneEth,
+            zeroAddress,
+            testHash,
+            testUri,
+            this.merkleTree.getHexRoot(),
+            0,
+            0,
+            0,
+            BigNumber.from(nextBlockTimestamp).add(10)
+          ],
           feesInput
         );
       await blueprint.connect(ContractOwner).beginSale(0);
@@ -325,7 +333,7 @@ describe("Blueprint Sales", function () {
       // Sale un-pausing should fail because the on-chain time has past the saleEndTimestamp
       await expect(
         blueprint.connect(ContractOwner).unpauseSale(0)
-      ).to.be.revertedWith("Sale ended");
+      ).to.be.revertedWith("ended");
     });
     it("2. Can't purchase blueprints from a sale with an expired timestamp", async function () {
       // Simulate a time delay by setting the timestamp of the next block far in the future
@@ -337,7 +345,7 @@ describe("Blueprint Sales", function () {
         blueprint
           .connect(user2)
           .purchaseBlueprints(0, tenPieces, tenPieces, 0, [], { value: BigNumber.from(tenPieces).mul(oneEth) })
-      ).to.be.revertedWith("purchase unavailable");
+      ).to.be.revertedWith("unavailable");
     });
     // TODO: consider a test that shows you can't pause a sale who's end timestamp has passed...but maybe we don't want this if we want the minter to be able
     //       to pause a sale then extend the timestamp/adjust settings and then unpause. Note tho this can be done using updateBlueprintSettings as is

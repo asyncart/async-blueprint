@@ -220,15 +220,16 @@ task("deployRoyaltySplitterAndPrepareCreatorBlueprints", "Deploys royalty splitt
             taskArgs.mintAmountArtist,
             taskArgs.mintAmountPlatform,
             taskArgs.maxPurchaseAmount,
-            taskArgs.saleEndTimestamp,
-            [
-                [],
-                []
-            ]
+            taskArgs.saleEndTimestamp
+        ],
+        [
+          [],
+          []
         ],
         sortedAddressArray([platform, taskArgs.artist]),
         [250000, 750000],
-        1000
+        1000,
+        "ID"
     )
 
     const txReceipt = await tx.wait(); 

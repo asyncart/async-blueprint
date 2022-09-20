@@ -69,21 +69,23 @@ describe("Blueprint presale minting", function () {
       blueprint = await Blueprint.deploy();
       SplitMain = await ethers.getContractFactory("SplitMain");
       splitMain = await SplitMain.deploy();
-      blueprint.initialize("Async Blueprint", "ABP", ContractOwner.address, ContractOwner.address, splitMain.address);
+      blueprint.initialize("Async Blueprint", "ABP", [ContractOwner.address, ContractOwner.address, ContractOwner.address], splitMain.address);
       await blueprint
         .connect(ContractOwner)
         .prepareBlueprint(
           testArtist.address,
-          oneThousandPieces,
-          oneEth,
-          zeroAddress,
-          testHash,
-          testUri,
-          this.merkleTree.getHexRoot(),
-          testArtistArtistMintQuantity,
-          testPlatformArtistMintQuantity,
-          testMaxPurchaseAmount,
-          0,
+          [
+            oneThousandPieces,
+            oneEth,
+            zeroAddress,
+            testHash,
+            testUri,
+            this.merkleTree.getHexRoot(),
+            testArtistArtistMintQuantity,
+            testPlatformArtistMintQuantity,
+            testMaxPurchaseAmount,
+            0
+          ],
           feesInput
         );
     });
@@ -126,19 +128,19 @@ describe("Blueprint presale minting", function () {
         blueprint
           .connect(ContractOwner)
           .artistMint(0, testPlatformArtistMintQuantity + 1)
-      ).to.be.revertedWith("can't mint quantity");
+      ).to.be.revertedWith("quantity >");
     });
     it("4: Should not allow the artist to mint more than allocation", async function () {
       await expect(
         blueprint
           .connect(testArtist)
           .artistMint(0, testArtistArtistMintQuantity + 1)
-      ).to.be.revertedWith("can't mint quantity");
+      ).to.be.revertedWith("quantity >");
     });
     it("5: Should not allow other user to mint preSale", async function () {
       await expect(
         blueprint.connect(user1).artistMint(0, testArtistArtistMintQuantity)
-      ).to.be.revertedWith("user cannot mint presale");
+      ).to.be.revertedWith("unauthorized");
     });
     it("6: Should allow presale mint once sale started", async function () {
       await blueprint.connect(ContractOwner).beginSale(0);
@@ -165,7 +167,7 @@ describe("Blueprint presale minting", function () {
         blueprint
           .connect(testArtist)
           .artistMint(0, testArtistArtistMintQuantity)
-      ).to.be.revertedWith("Must be presale or public sale");
+      ).to.be.revertedWith("not pre/public sale");
     });
   });
 });
