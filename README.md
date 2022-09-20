@@ -106,10 +106,16 @@ To verify the contract on rinkeby
 yarn verify <implementation_address>
 ```
 
-Latest deployment is available at address: 0xbd3008b9383a5d5639f7e1c34e2eb6e6a13bd0f9
-https://rinkeby.etherscan.io/address/0xbd3008b9383a5d5639f7e1c34e2eb6e6a13bd0f9#code
-✨
+Latest deployments:
 
-```
+**Goerli**
 
-```
+Factory: https://goerli.etherscan.io/address/0xe9505D34Fe7e7e8E4c3a30B81E14Fd38c261f3b8#code
+CreatorBlueprints Beacon: https://goerli.etherscan.io/address/0x7548C1824E9f5ac26742673c5bc8dAA3010c0eC8#code
+BlueprintV12 Beacon: https://goerli.etherscan.io/address/0xd7ca12df6c2b29ee190c5518c4d68d33aabb512c#code
+
+**Rinkeby**
+
+Factory: https://rinkeby.etherscan.io/address/0xD9F38199E7D04c1CDaD8CEC869a8C92b2dA4D847#code
+CreatorBlueprints Beacon: https://rinkeby.etherscan.io/address/0x2cfe0a2c50960643940fd987751e3d39c72c3984#code 
+BlueprintV12 Beacon: https://rinkeby.etherscan.io/address/0xa79bfc20657460fab0b492c69f160fcb23648615#code

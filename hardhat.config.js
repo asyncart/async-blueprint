@@ -48,6 +48,12 @@ module.exports = {
     hardhat: {
       allowUnlimitedContractSize: true,
       initialBaseFeePerGas: 0,
+    },
+    rinkeby: {
+      url: "https://rinkeby.infura.io/v3/9aa3d95b3bc440fa88ea12eaa4456161"
+    },
+    goerli: {
+      url: "https://goerli.infura.io/v3/9aa3d95b3bc440fa88ea12eaa4456161"
     }
   },
   etherscan: {
