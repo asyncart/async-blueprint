@@ -71,23 +71,25 @@ describe("Prepare Blueprint", function () {
       blueprint = await Blueprint.deploy();
       SplitMain = await ethers.getContractFactory("SplitMain");
       splitMain = await SplitMain.deploy();
-      blueprint.initialize("Async Blueprint", "ABP", ContractOwner.address, ContractOwner.address, splitMain.address);
+      blueprint.initialize("Async Blueprint", "ABP", [ContractOwner.address, ContractOwner.address, ContractOwner.address], splitMain.address);
     });
     it("1: should prepare the blueprint", async function () {
       await blueprint
         .connect(ContractOwner)
         .prepareBlueprint(
           testArtist.address,
-          tenThousandPieces,
-          oneEth,
-          zeroAddress,
-          testHash,
-          testUri,
-          this.merkleTree.getHexRoot(),
-          0,
-          0,
-          0,
-          BigNumber.from(0),
+          [
+            tenThousandPieces,
+            oneEth,
+            zeroAddress,
+            testHash,
+            testUri,
+            this.merkleTree.getHexRoot(),
+            0,
+            0,
+            0,
+            BigNumber.from(0)
+          ],
           feesInput
         );
 
@@ -110,6 +112,29 @@ describe("Prepare Blueprint", function () {
           .connect(ContractOwner)
           .prepareBlueprint(
             testArtist.address,
+            [
+              tenThousandPieces,
+              oneEth,
+              zeroAddress,
+              testHash,
+              testUri,
+              this.merkleTree.getHexRoot(),
+              0,
+              0,
+              0,
+              BigNumber.from(1)
+            ],
+            emptyFeesInput
+          )
+      ).to.be.revertedWith("ended");
+    });
+    it("should allow timestamp to be a value in the future", async function () {
+      const saleEndTimestamp = BigNumber.from(Date.now()).div(1000).add(100000);
+      await blueprint
+        .connect(ContractOwner)
+        .prepareBlueprint(
+          testArtist.address,
+          [
             tenThousandPieces,
             oneEth,
             zeroAddress,
@@ -119,27 +144,8 @@ describe("Prepare Blueprint", function () {
             0,
             0,
             0,
-            BigNumber.from(1),
-            emptyFeesInput
-          )
-      ).to.be.revertedWith("Sale ended");
-    });
-    it("should allow timestamp to be a value in the future", async function () {
-      const saleEndTimestamp = BigNumber.from(Date.now()).div(1000).add(100000);
-      await blueprint
-        .connect(ContractOwner)
-        .prepareBlueprint(
-          testArtist.address,
-          tenThousandPieces,
-          oneEth,
-          zeroAddress,
-          testHash,
-          testUri,
-          this.merkleTree.getHexRoot(),
-          0,
-          0,
-          0,
-          BigNumber.from(saleEndTimestamp),
+            BigNumber.from(saleEndTimestamp)
+          ],
           emptyFeesInput
         )
       let result = await blueprint.blueprints(0);
@@ -150,16 +156,18 @@ describe("Prepare Blueprint", function () {
         .connect(ContractOwner)
         .prepareBlueprint(
           testArtist.address,
-          tenThousandPieces,
-          oneEth,
-          zeroAddress,
-          testHash,
-          testUri,
-          this.merkleTree.getHexRoot(),
-          0,
-          0,
-          0,
-          BigNumber.from(0),
+          [
+            tenThousandPieces,
+            oneEth,
+            zeroAddress,
+            testHash,
+            testUri,
+            this.merkleTree.getHexRoot(),
+            0,
+            0,
+            0,
+            BigNumber.from(0)
+          ],
           emptyFeesInput
         );
       let result = await blueprint.blueprints(0);
@@ -171,16 +179,18 @@ describe("Prepare Blueprint", function () {
         .connect(ContractOwner)
         .prepareBlueprint(
           testArtist.address,
-          tenThousandPieces,
-          oneEth,
-          zeroAddress,
-          testHash,
-          testUri,
-          this.merkleTree.getHexRoot(),
-          0,
-          0,
-          0,
-          BigNumber.from(0),
+          [
+            tenThousandPieces,
+            oneEth,
+            zeroAddress,
+            testHash,
+            testUri,
+            this.merkleTree.getHexRoot(),
+            0,
+            0,
+            0,
+            BigNumber.from(0)
+          ],
           emptyFeesInput
         );
         
@@ -196,28 +206,30 @@ describe("Prepare Blueprint", function () {
         .connect(ContractOwner)
         .prepareBlueprint(
           testArtist.address,
-          tenThousandPieces,
-          oneEth,
-          zeroAddress,
-          testHash,
-          testUri,
-          this.merkleTree.getHexRoot(),
-          0,
-          0,
-          0,
-          BigNumber.from(0),
+          [
+            tenThousandPieces,
+            oneEth,
+            zeroAddress,
+            testHash,
+            testUri,
+            this.merkleTree.getHexRoot(),
+            0,
+            0,
+            0,
+            BigNumber.from(0)
+          ],
           emptyFeesInput
         );
       await expect(
         blueprint
           .connect(ContractOwner)
           .setFeeRecipients(0, { ...feesInput, primaryFeeBPS: mismatchBps })
-      ).to.be.revertedWith("bps over");
+      ).to.be.revertedWith("bps >");
     });
     it("should not allow sale for unprepared blueprint", async function () {
       await expect(
         blueprint.connect(ContractOwner).beginSale(0)
-      ).to.be.revertedWith("wrong sale state");
+      ).to.be.revertedWith("started");
     });
   });
 });

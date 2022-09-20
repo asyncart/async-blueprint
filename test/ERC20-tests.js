@@ -93,21 +93,23 @@ describe("ERC20 interactions", function () {
 
       await erc20.connect(user1).approve(blueprint.address, oneThousandTokens);
 
-      blueprint.initialize("Async Blueprint", "ABP", ContractOwner.address, ContractOwner.address, splitMain.address);
+      blueprint.initialize("Async Blueprint", "ABP", [ContractOwner.address, ContractOwner.address, ContractOwner.address], splitMain.address);
       await blueprint
         .connect(ContractOwner)
         .prepareBlueprint(
           testArtist.address,
-          fiveHundredPieces,
-          oneEth,
-          erc20.address,
-          testHash,
-          testUri,
-          this.merkleTree.getHexRoot(),
-          0,
-          0,
-          0,
-          0,
+          [
+            fiveHundredPieces,
+            oneEth,
+            erc20.address,
+            testHash,
+            testUri,
+            this.merkleTree.getHexRoot(),
+            0,
+            0,
+            0,
+            0
+          ],
           feesInput
         );
       await blueprint.connect(ContractOwner).beginSale(0);
@@ -138,16 +140,18 @@ describe("ERC20 interactions", function () {
         .connect(ContractOwner)
         .prepareBlueprint(
           user2.address,
-          fiveHundredPieces,
-          oneEth,
-          zeroAddress,
-          testHash + "dsfdk",
-          testUri + "unpause_test",
-          this.merkleTree.getHexRoot(),
-          0,
-          0,
-          0,
-          0,
+          [
+            fiveHundredPieces,
+            oneEth,
+            zeroAddress,
+            testHash + "dsfdk",
+            testUri + "unpause_test",
+            this.merkleTree.getHexRoot(),
+            0,
+            0,
+            0,
+            0
+          ],
           feesInput
         );
       await expect(
@@ -194,7 +198,7 @@ describe("ERC20 interactions", function () {
           blueprint
             .connect(user2)
             .purchaseBlueprints(0, tenPieces, tenPieces, 10, [], { value: 10 })
-        ).to.be.revertedWith("eth value not zero");
+        ).to.be.revertedWith("eth value != 0");
       });
       it("3: should not allow purchase of more than capacity", async function () {
         let fiveHundredEth = fiveHundredPieces.mul(oneEth);

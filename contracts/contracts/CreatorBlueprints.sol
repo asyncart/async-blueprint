@@ -2,6 +2,7 @@
 pragma solidity 0.8.4;
 
 import "./abstract/HasSecondarySaleFees.sol";
+import "./common/IBlueprintTypes.sol";
 import "@openzeppelin/contracts-upgradeable/token/ERC721/ERC721Upgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/access/AccessControlEnumerableUpgradeable.sol";
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
@@ -86,16 +87,6 @@ contract CreatorBlueprints is
     }
 
     /**
-     * @dev Object holding primary fee data
-     * @param primaryFeeBPS Primary fee percentage allocations, in basis points
-     * @param primaryFeeRecipients Primary fee recipients 
-     */
-    struct Fees {
-        uint32[] primaryFeeBPS;
-        address[] primaryFeeRecipients;
-    }
-
-    /**
      * @dev Object holding royalty data
      * @param split Royalty splitter receiving royalties
      * @param royaltyCutBPS Total percentage of token sales sent to split, in basis points 
@@ -134,35 +125,7 @@ contract CreatorBlueprints is
         string baseTokenUri;
         bytes32 merkleroot;
         SaleState saleState;    
-        Fees feeRecipientInfo;
-    }
-
-    /**
-     * @dev Object passed in when preparing blueprint 
-     * @param _capacity Number of NFTs in Blueprint 
-     * @param _price Price per NFT in Blueprint
-     * @param _erc20Token Address of ERC20 currency required to buy NFTs, can be zero address if expected currency is native gas token 
-     * @param _blueprintMetaData Blueprint metadata uri
-     * @param _baseTokenUri Base URI for token, resultant uri for each token is base uri concatenated with token id
-     * @param _merkleroot Root of Merkle tree holding whitelisted accounts 
-     * @param _mintAmountArtist Amount of NFTs of Blueprint mintable by artist
-     * @param _mintAmountPlatform Amount of NFTs of Blueprint mintable by platform 
-     * @param _maxPurchaseAmount Max number of NFTs purchasable in a single transaction
-     * @param _saleEndTimestamp Timestamp when the sale ends 
-     * @param _feeRecipientInfo Object containing primary and secondary fee configuration
-     */ 
-    struct BlueprintPreparationConfig {
-        uint64 _capacity;
-        uint128 _price;
-        address _erc20Token;
-        string _blueprintMetaData;
-        string _baseTokenUri;
-        bytes32 _merkleroot;
-        uint32 _mintAmountArtist;
-        uint32 _mintAmountPlatform;
-        uint64 _maxPurchaseAmount;
-        uint128 _saleEndTimestamp;
-        Fees _feeRecipientInfo; 
+        IBlueprintTypes.PrimaryFees feeRecipientInfo;
     }
 
     /**
@@ -177,18 +140,6 @@ contract CreatorBlueprints is
         string symbol;
         string contractURI;
         address artist;
-    }
-
-    /**
-     * @dev Core administrative accounts 
-     * @param platform Platform, holder of DEFAULT_ADMIN role
-     * @param minter Minter, holder of MINTER_ROLE
-     * @param asyncSaleFeesRecipient Recipient of primary sale fees going to platform
-     */
-    struct CreatorBlueprintsAdmins {
-        address platform;
-        address minter;
-        address asyncSaleFeesRecipient;
     }
 
     /**
@@ -307,7 +258,7 @@ contract CreatorBlueprints is
     modifier isSaleEndTimestampCurrentlyValid(
         uint128 _saleEndTimestamp
     ) {
-        require(_isSaleEndTimestampCurrentlyValid(_saleEndTimestamp), "Sale ended");
+        require(_isSaleEndTimestampCurrentlyValid(_saleEndTimestamp), "ended");
         _;
     }
 
@@ -327,10 +278,11 @@ contract CreatorBlueprints is
      * @param creatorBlueprintsInput Core parameters for contract initialization 
      * @param creatorBlueprintsAdmins Administrative accounts 
      * @param _royaltyParameters Initial royalty settings 
+     * @param extraMinter Additional address to give minter role
      */
     function initialize(
         CreatorBlueprintsInput calldata creatorBlueprintsInput,
-        CreatorBlueprintsAdmins calldata creatorBlueprintsAdmins,
+        IBlueprintTypes.Admins calldata creatorBlueprintsAdmins,
         RoyaltyParameters calldata _royaltyParameters,
         address extraMinter
     ) public initializer validRoyaltyParameters(_royaltyParameters) {
@@ -485,10 +437,12 @@ contract CreatorBlueprints is
 
     /** 
      * @dev Prepare the blueprint (this is the core operation to set up a blueprint)
-     * @param config Object containing all values required to prepare blueprint
+     * @param config Object containing values required to prepare blueprint
+     * @param _feeRecipientInfo Primary and secondary fees config
      */  
     function prepareBlueprint(
-        BlueprintPreparationConfig calldata config
+        IBlueprintTypes.BlueprintPreparationConfig calldata config,
+        IBlueprintTypes.PrimaryFees calldata _feeRecipientInfo
     )   external 
         onlyRole(MINTER_ROLE)
     {
@@ -506,7 +460,7 @@ contract CreatorBlueprints is
         );
 
         setBlueprintPrepared(config._blueprintMetaData);
-        setFeeRecipients(config._feeRecipientInfo);
+        setFeeRecipients(_feeRecipientInfo);
     }
 
     /**
@@ -540,7 +494,7 @@ contract CreatorBlueprints is
      * @param _feeRecipientInfo Fees config 
      */
     function setFeeRecipients(
-        Fees memory _feeRecipientInfo
+        IBlueprintTypes.PrimaryFees memory _feeRecipientInfo
     ) public onlyRole(MINTER_ROLE) {
         require(
             blueprint.saleState != SaleState.not_prepared,

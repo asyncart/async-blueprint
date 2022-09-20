@@ -8,14 +8,15 @@ require("@openzeppelin/hardhat-upgrades");
 require('hardhat-contract-sizer');
 
 const {
-  rinkebyPrivateKey,
+  goerliPrivateKey,
   alchemyUrl,
   etherscanApiKey,
   coinmarketCapKey,
-} = require("./secretsManager.example.js");
+} = require("./secretsManager.js");
 
 require("./tasks/deploy");
 require("./tasks/factory")
+require("./tasks/royalties");
 
 module.exports = {
   solidity: {
@@ -48,6 +49,10 @@ module.exports = {
     hardhat: {
       allowUnlimitedContractSize: true,
       initialBaseFeePerGas: 0,
+    },
+    goerli: {
+      accounts: [goerliPrivateKey],
+      url: "https://goerli.infura.io/v3/9aa3d95b3bc440fa88ea12eaa4456161"
     }
   },
   etherscan: {

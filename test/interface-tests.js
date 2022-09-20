@@ -14,7 +14,7 @@ describe("Admin Blueprint Tests", function () {
     blueprint = await Blueprint.deploy();
     SplitMain = await ethers.getContractFactory("SplitMain");
     splitMain = await SplitMain.deploy();
-    blueprint.initialize("Async Blueprint", "ABP", ContractOwner.address, ContractOwner.address, splitMain.address);
+    blueprint.initialize("Async Blueprint", "ABP", [ContractOwner.address, ContractOwner.address, ContractOwner.address], splitMain.address);
   });
   it("supports HasSecondarySaleFees interface", async function () {
     // This interfaceId is different than the _INTERFACE_ID_FEES that HasSecondarySaleFees registers with ERC165 but it matches its type(HasSecondarySaleFees).interfaceId which is what we really care about

@@ -38,7 +38,7 @@ describe("Admin Blueprint Tests", function () {
     blueprint = await Blueprint.deploy();
     SplitMain = await ethers.getContractFactory("SplitMain");
     splitMain = await SplitMain.deploy();
-    blueprint.initialize("Async Blueprint", "ABP", ContractOwner.address, ContractOwner.address, splitMain.address);
+    blueprint.initialize("Async Blueprint", "ABP", [ContractOwner.address, ContractOwner.address, ContractOwner.address], splitMain.address);
   });
   it("1.a: should update minter role", async function () {
     await blueprint.connect(ContractOwner).updateMinterAddress(user2.address);
@@ -46,16 +46,18 @@ describe("Admin Blueprint Tests", function () {
       .connect(user2)
       .prepareBlueprint(
         testArtist.address,
-        tenThousandPieces,
-        oneEth,
-        zeroAddress,
-        testHash,
-        testUri,
-        "0x0000000000000000000000000000000000000000000000000000000000000000",
-        0,
-        0,
-        0,
-        0,
+        [
+          tenThousandPieces,
+          oneEth,
+          zeroAddress,
+          testHash,
+          testUri,
+          "0x0000000000000000000000000000000000000000000000000000000000000000",
+          0,
+          0,
+          0,
+          0
+        ],
         feesInput
       );
     let result = await blueprint.blueprints(0);
@@ -74,16 +76,18 @@ describe("Admin Blueprint Tests", function () {
       .connect(ContractOwner)
       .prepareBlueprint(
         testArtist.address,
-        tenThousandPieces,
-        oneEth,
-        zeroAddress,
-        testHash,
-        testUri,
-        "0x0000000000000000000000000000000000000000000000000000000000000000",
-        0,
-        0,
-        0,
-        0,
+        [
+          tenThousandPieces,
+          oneEth,
+          zeroAddress,
+          testHash,
+          testUri,
+          "0x0000000000000000000000000000000000000000000000000000000000000000",
+          0,
+          0,
+          0,
+          0
+        ],
         feesInput
       );
     let updatedUri = "http://updatedUri/";
@@ -105,16 +109,18 @@ describe("Admin Blueprint Tests", function () {
       .connect(ContractOwner)
       .prepareBlueprint(
         testArtist.address,
-        tenThousandPieces,
-        oneEth,
-        zeroAddress,
-        testHash,
-        testUri,
-        "0x0000000000000000000000000000000000000000000000000000000000000000",
-        0,
-        0,
-        0,
-        0,
+        [
+          tenThousandPieces,
+          oneEth,
+          zeroAddress,
+          testHash,
+          testUri,
+          "0x0000000000000000000000000000000000000000000000000000000000000000",
+          0,
+          0,
+          0,
+          0
+        ],
         feesInput
       );
     let updatedUri = "http://updatedUri/";
@@ -122,7 +128,7 @@ describe("Admin Blueprint Tests", function () {
     await blueprint.connect(ContractOwner).lockBlueprintTokenUri(0);
     await expect(
       blueprint.connect(ContractOwner).updateBlueprintTokenUri(0, updatedUri)
-    ).to.be.revertedWith("uri locked");
+    ).to.be.revertedWith("locked");
   });
   // it("2.d: should allow platform to update base token uri", async function () {
   //   await blueprint
@@ -156,16 +162,18 @@ describe("Admin Blueprint Tests", function () {
       .connect(ContractOwner)
       .prepareBlueprint(
         testArtist.address,
-        tenThousandPieces,
-        oneEth,
-        zeroAddress,
-        testHash,
-        testUri,
-        "0x0000000000000000000000000000000000000000000000000000000000000000",
-        0,
-        0,
-        0,
-        0,
+        [
+          tenThousandPieces,
+          oneEth,
+          zeroAddress,
+          testHash,
+          testUri,
+          "0x0000000000000000000000000000000000000000000000000000000000000000",
+          0,
+          0,
+          0,
+          0
+        ],
         feesInput
       );
     let randomSeed = "randomSeedHash";
