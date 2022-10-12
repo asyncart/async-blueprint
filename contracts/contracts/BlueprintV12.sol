@@ -261,27 +261,6 @@ contract BlueprintV12 is
     }
 
     /**
-     * @dev Checks if the current purchaser is whitelisted or the public sale has started 
-     * @param _blueprintID ID of blueprint 
-     * @param _whitelistedQuantity Purchaser's requested quantity. Validated against merkle tree
-     * @param proof Corresponding proof for purchaser in merkle tree 
-     */ 
-    modifier BuyerWhitelistedOrSaleStarted(
-        uint256 _blueprintID,
-        uint32 _whitelistedQuantity,
-        bytes32[] calldata proof
-    ) {
-        require(
-            // Sale must be ongoing OR
-            _isSaleOngoing(_blueprintID) ||
-            // Must be presale and a whitelisted user
-            (_isBlueprintPreparedAndNotStarted(_blueprintID) && proof.length != 0 && _verify(_leaf(msg.sender, uint256(_whitelistedQuantity)), blueprints[_blueprintID].merkleroot, proof)),
-            "unavailable"
-        );
-        _;
-    }
-
-    /**
      * @dev Checks if quantity of NFTs is available for purchase in blueprint
      * @param _blueprintID ID of blueprint 
      * @param _quantity Quantity of NFTs being checked 
@@ -351,6 +330,24 @@ contract BlueprintV12 is
         returns (bool)
     {
         return blueprints[_blueprintID].saleState == SaleState.started && _isSaleEndTimestampCurrentlyValid(blueprints[_blueprintID].saleEndTimestamp);
+    }
+
+    /**
+     * @dev Checks if user whitelisted for presale purchase 
+     * @param _blueprintID ID of blueprint 
+     * @param _whitelistedQuantity Purchaser's requested quantity. Validated against merkle tree
+     * @param proof Corresponding proof for purchaser in merkle tree 
+     */ 
+    function _isWhitelistedAndPresale(
+        uint256 _blueprintID,
+        uint32 _whitelistedQuantity,
+        bytes32[] calldata proof
+    )
+        internal
+        view
+        returns (bool)
+    {
+        return (_isBlueprintPreparedAndNotStarted(_blueprintID) && proof.length != 0 && _verify(_leaf(msg.sender, uint256(_whitelistedQuantity)), blueprints[_blueprintID].merkleroot, proof));
     }
 
     /**
@@ -663,10 +660,15 @@ contract BlueprintV12 is
         external
         payable
         nonReentrant
-        BuyerWhitelistedOrSaleStarted(blueprintID, whitelistedQuantity, proof)
         isQuantityAvailableForPurchase(blueprintID, purchaseQuantity)
     {
-        require(purchaseQuantity <= whitelistedQuantity, "> whitelisted amount");
+        if (_isWhitelistedAndPresale(blueprintID, whitelistedQuantity, proof)) {
+            require(purchaseQuantity <= whitelistedQuantity, "> whitelisted amount");
+            _updateMerkleRootForPurchase(blueprintID, proof, whitelistedQuantity - purchaseQuantity);
+        } else {
+            require(_isSaleOngoing(blueprintID), "unavailable");
+        }
+
         require(
             blueprints[blueprintID].maxPurchaseAmount == 0 ||
                 purchaseQuantity <= blueprints[blueprintID].maxPurchaseAmount,
@@ -681,7 +683,6 @@ contract BlueprintV12 is
             artist
         );
         _mintQuantity(blueprintID, purchaseQuantity, nftRecipient);
-        _updateMerkleRootForPurchase(blueprintID, proof, whitelistedQuantity - purchaseQuantity);
     }
 
     /**
@@ -702,10 +703,15 @@ contract BlueprintV12 is
         external
         payable
         nonReentrant
-        BuyerWhitelistedOrSaleStarted(blueprintID, whitelistedQuantity, proof)
         isQuantityAvailableForPurchase(blueprintID, purchaseQuantity)
     {
-        require(purchaseQuantity <= whitelistedQuantity, "> whitelisted amount");
+        if (_isWhitelistedAndPresale(blueprintID, whitelistedQuantity, proof)) {
+            require(purchaseQuantity <= whitelistedQuantity, "> whitelisted amount");
+            _updateMerkleRootForPurchase(blueprintID, proof, whitelistedQuantity - purchaseQuantity);
+        } else {
+            require(_isSaleOngoing(blueprintID), "unavailable");
+        }
+
         require(
             blueprints[blueprintID].maxPurchaseAmount == 0 ||
                 purchaseQuantity <= blueprints[blueprintID].maxPurchaseAmount,
@@ -719,9 +725,7 @@ contract BlueprintV12 is
             tokenAmount,
             artist
         );
-
         _mintQuantity(blueprintID, purchaseQuantity, msg.sender);
-        _updateMerkleRootForPurchase(blueprintID, proof, whitelistedQuantity - purchaseQuantity);
     }
 
     /**
