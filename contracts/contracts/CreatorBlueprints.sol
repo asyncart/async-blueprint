@@ -219,25 +219,6 @@ contract CreatorBlueprints is
     }
 
     /**
-     * @dev Checks if the current purchaser is whitelisted or the public sale has started 
-     * @param _whitelistedQuantity Purchaser's requested quantity. Validated against merkle tree
-     * @param proof Corresponding proof for purchaser in merkle tree 
-     */ 
-    modifier BuyerWhitelistedOrSaleStarted(
-        uint32 _whitelistedQuantity,
-        bytes32[] calldata proof
-    ) {
-        require(
-            // Sale must be ongoing OR
-            _isSaleOngoing() ||
-            // Must be presale and a whitelisted user
-            (_isBlueprintPreparedAndNotStarted() && proof.length != 0 && _verify(_leaf(msg.sender, uint256(_whitelistedQuantity)), blueprint.merkleroot, proof)),
-            "not available to purchase"
-        );
-        _;
-    }
-
-    /**
      * @dev Checks if quantity of NFTs is available for purchase in blueprint
      * @param _quantity Quantity of NFTs being checked 
      */ 
@@ -317,6 +298,22 @@ contract CreatorBlueprints is
         returns (bool)
     {
         return blueprint.saleState == SaleState.started && _isSaleEndTimestampCurrentlyValid(blueprint.saleEndTimestamp);
+    }
+
+    /**
+     * @dev Checks if user whitelisted for presale purchase
+     * @param _whitelistedQuantity Purchaser's requested quantity. Validated against merkle tree
+     * @param proof Corresponding proof for purchaser in merkle tree 
+     */ 
+    function _isWhitelistedAndPresale(
+        uint32 _whitelistedQuantity,
+        bytes32[] calldata proof
+    )
+        internal
+        view
+        returns (bool)
+    {
+        return (_isBlueprintPreparedAndNotStarted() && proof.length != 0 && _verify(_leaf(msg.sender, uint256(_whitelistedQuantity)), blueprint.merkleroot, proof));
     }
  
     /**
@@ -580,10 +577,15 @@ contract CreatorBlueprints is
         external
         payable
         nonReentrant
-        BuyerWhitelistedOrSaleStarted(whitelistedQuantity, proof)
         isQuantityAvailableForPurchase(purchaseQuantity)
     {
-        require(purchaseQuantity <= whitelistedQuantity, "cannot purchase > whitelisted amount");
+        if (_isWhitelistedAndPresale(whitelistedQuantity, proof)) {
+            require(purchaseQuantity <= whitelistedQuantity, "> whitelisted amount");
+            _updateMerkleRootForPurchase(proof, whitelistedQuantity - purchaseQuantity);
+        } else {
+            require(_isSaleOngoing(), "unavailable");
+        }
+
         require(
             blueprint.maxPurchaseAmount == 0 ||
                 purchaseQuantity <= blueprint.maxPurchaseAmount,
@@ -596,7 +598,6 @@ contract CreatorBlueprints is
             artist
         );
         _mintQuantity(purchaseQuantity, nftRecipient);
-        _updateMerkleRootForPurchase(proof, whitelistedQuantity - purchaseQuantity);
     }
 
     /**
@@ -615,10 +616,15 @@ contract CreatorBlueprints is
         external
         payable
         nonReentrant
-        BuyerWhitelistedOrSaleStarted(whitelistedQuantity, proof)
         isQuantityAvailableForPurchase(purchaseQuantity)
     {
-        require(purchaseQuantity <= whitelistedQuantity, "cannot purchase > whitelisted amount");
+        if (_isWhitelistedAndPresale(whitelistedQuantity, proof)) {
+            require(purchaseQuantity <= whitelistedQuantity, "> whitelisted amount");
+            _updateMerkleRootForPurchase(proof, whitelistedQuantity - purchaseQuantity);
+        } else {
+            require(_isSaleOngoing(), "unavailable");
+        }
+
         require(
             blueprint.maxPurchaseAmount == 0 ||
                 purchaseQuantity <= blueprint.maxPurchaseAmount,
@@ -632,7 +638,6 @@ contract CreatorBlueprints is
         );
 
         _mintQuantity(purchaseQuantity, msg.sender);
-        _updateMerkleRootForPurchase(proof, whitelistedQuantity - purchaseQuantity);
     }
 
     /**
