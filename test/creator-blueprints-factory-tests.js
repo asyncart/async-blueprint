@@ -10,17 +10,21 @@ describe("Blueprint Factory Deployer Tests", function () {
   let provider;
   let artist;
   let splitMain;
-  const sampleSplit = "0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266".toLowerCase()
+  const sampleSplit = "0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266"
   const creatorsInput = {
     "name": "Steve's Blueprint",
     "symbol": "STEVE",
     "contractURI": "https://mything",
-    "artist": "0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266".toLowerCase()
+    "artist": "0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266"
   }
   const royaltyCutBPS = 500
   const blueprintPlatformId = "mongo-id"
   const royaltyRecipients = ["0x3C44CdDdB6a900fa2b585dd299e03d12FA4293BC", "0x70997970C51812dc3A010C7d01b50e0d17dc79C8"]
   const allocations = [500000, 500000]
+  const primaryFees = {
+    "primaryFeeBPS": [1000, 9000],
+    "primaryFeeRecipients": royaltyRecipients
+  }
 
   beforeEach(async function () {
     [CreatorUpgrader, GlobalUpgrader, GlobalMinter, CreatorMinter, Platform, FactoryOwner, TestArtist] =
@@ -62,9 +66,9 @@ describe("Blueprint Factory Deployer Tests", function () {
       let deployCreatorTxn = await blueprintFactory.deployCreatorBlueprints(creatorsInput, royaltyCutBPS, sampleSplit, blueprintPlatformId)
       let deployCreatorReciept = await deployCreatorTxn.wait()
       let creatorBlueprintDeployedLog = deployCreatorReciept.logs.pop()
-      let splitAddr = ("0x" + creatorBlueprintDeployedLog.topics.pop().slice(26)).toLowerCase();
-      expect(splitAddr).to.equal(sampleSplit);
-      let creatorBlueprintAddr = ("0x" + creatorBlueprintDeployedLog.topics.pop().slice(26)).toLowerCase();
+      let splitAddr = ("0x" + creatorBlueprintDeployedLog.topics.pop().slice(26))
+      expect(ethers.utils.getAddress(splitAddr)).to.equal(sampleSplit);
+      let creatorBlueprintAddr = ("0x" + creatorBlueprintDeployedLog.topics.pop().slice(26))
       let CreatorBlueprint = new ethers.Contract(creatorBlueprintAddr, creatorBlueprintsABI.abi, provider);
       expect(await CreatorBlueprint.name()).to.equal(creatorsInput.name);
       expect(await CreatorBlueprint.symbol()).to.equal(creatorsInput.symbol);
@@ -80,6 +84,29 @@ describe("Blueprint Factory Deployer Tests", function () {
             royaltyRecipients, 
             allocations, 
             royaltyCutBPS, 
+            blueprintPlatformId
+        )
+        const receipt = await tx.wait()
+        const log = receipt.logs.pop()
+        const splitAddress = "0x" + log.topics.pop().slice(26)
+        const creatorBlueprintsAddress = "0x" + log.topics[1].slice(26)
+        const creatorBlueprints = new ethers.Contract(creatorBlueprintsAddress, creatorBlueprintsABI.abi, provider);
+        expect(await creatorBlueprints.name()).to.equal(creatorsInput.name);
+        expect(await creatorBlueprints.symbol()).to.equal(creatorsInput.symbol);
+        expect(await creatorBlueprints.platform()).to.equal(Platform.address);
+        expect(await creatorBlueprints.minterAddress()).to.equal(CreatorMinter.address);
+        expect(await creatorBlueprints.asyncSaleFeesRecipient()).to.equal(Platform.address); 
+        expect(await creatorBlueprints.artist()).to.equal(creatorsInput.artist); 
+        expect(await creatorBlueprints.royaltyParameters()).to.eql([ethers.utils.getAddress(splitAddress), royaltyCutBPS])
+      });
+
+      it("deployAndPrepareCreatorBlueprints", async function() {
+        const tx = await blueprintFactory.deployAndPrepareCreatorBlueprints(
+            creatorsInput, 
+            // grab from a test 
+            primaryFees, 
+            royaltyCutBPS,
+            sampleSplit, 
             blueprintPlatformId
         )
         const receipt = await tx.wait()
