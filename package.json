@@ -2,7 +2,7 @@
   "name": "async-blueprint",
   "scripts": {
     "compile": "hardhat compile",
-    "test": "hardhat test",
+    "test": "wrap () { hardhat test \"$*\" | cat; }; wrap",
     "coverage": "hardhat coverage",
     "deploy": "hardhat deploy",
     "deploy-rinkeby": "hardhat deploy --network rinkeby",
