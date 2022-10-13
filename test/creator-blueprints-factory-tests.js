@@ -8,6 +8,7 @@ const { expect, assert } = require("chai");
 const { intToBuffer } = require("ethjs-util");
 const { ethers } = require("hardhat");
 const blueprintV12ABI = require("./BlueprintV12.json");
+const creatorBlueprintsABI = require("./CreatorBlueprints.json");
 
 describe("Blueprint Factory Deployer Tests", function () {
   let BlueprintFactory;
@@ -15,12 +16,12 @@ describe("Blueprint Factory Deployer Tests", function () {
   let provider;
   let artist;
   let splitMain;
-  let sampleSplit = "0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266"
+  let sampleSplit = "0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266".toLowerCase()
   let creatorsInput = {
     "name": "Steve's Blueprint",
     "symbol": "STEVE",
     "contractURI": "https://mything",
-    "artist": "0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266"
+    "artist": "0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266".toLowerCase()
   }
   let royaltyCutBPS = 500
   let blueprintPlatformId = "mongo-id"
@@ -64,15 +65,17 @@ describe("Blueprint Factory Deployer Tests", function () {
     it("Deploy Creator Specific Contract", async function() {
       let deployCreatorTxn = await blueprintFactory.deployCreatorBlueprints(creatorsInput, royaltyCutBPS, sampleSplit, blueprintPlatformId)
       let deployCreatorReciept = await deployCreatorTxn.wait()
-      let creatorBlueprintDeployedLog = deployGlobalReciept.logs.pop()
-      let splitAddr = "0x" + creatorBlueprintDeployedLog.topics.pop().slice(26)
-      let creatorBlue
-      let BlueprintV12 = new ethers.Contract(blueprintAddr, blueprintV12ABI.abi, provider);
-      expect(await BlueprintV12.name()).to.equal("Blueprint for ART");
-      expect(await BlueprintV12.symbol()).to.equal("ART");
-      expect(await BlueprintV12.platform()).to.equal(Platform.address);
-      expect(await BlueprintV12.minterAddress()).to.equal(GlobalMinter.address);
-      expect(await BlueprintV12.asyncSaleFeesRecipient()).to.equal(Platform.address);
+      let creatorBlueprintDeployedLog = deployCreatorReciept.logs.pop()
+      let splitAddr = ("0x" + creatorBlueprintDeployedLog.topics.pop().slice(26)).toLowerCase();
+      expect(splitAddr).to.equal(sampleSplit);
+      let creatorBlueprintAddr = ("0x" + creatorBlueprintDeployedLog.topics.pop().slice(26)).toLowerCase();
+      let CreatorBlueprint = new ethers.Contract(creatorBlueprintAddr, creatorBlueprintsABI.abi, provider);
+      expect(await CreatorBlueprint.name()).to.equal(creatorsInput.name);
+      expect(await CreatorBlueprint.symbol()).to.equal(creatorsInput.symbol);
+      expect(await CreatorBlueprint.platform()).to.equal(Platform.address);
+      expect(await CreatorBlueprint.minterAddress()).to.equal(CreatorMinter.address);
+      expect(await CreatorBlueprint.asyncSaleFeesRecipient()).to.equal(Platform.address);
+      expect(ethers.utils.getAddress(await CreatorBlueprint.artist())).to.equal(ethers.utils.getAddress(creatorsInput.artist));
     });
   });
 });
