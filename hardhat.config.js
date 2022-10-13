@@ -11,7 +11,7 @@ const {
   evmPrivateKey,
   etherscanApiKey,
   coinmarketCapKey,
-} = require("./secretsManager.js");
+} = require("./secretsManager.example");
 
 require("./tasks/deploy");
 require("./tasks/factory")
