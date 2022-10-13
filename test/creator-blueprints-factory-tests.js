@@ -38,6 +38,11 @@ describe("Blueprint Factory Deployer Tests", function () {
     _maxPurchaseAmount: 2,
     _saleEndTimestamp: 100000000000000
   }
+  const newDefaultAdmins = {
+    platform: "0x3C44CdDdB6a900fa2b585dd299e03d12FA4293BC",
+    minter: "0x70997970C51812dc3A010C7d01b50e0d17dc79C8",
+    asyncSaleFeesRecipient: "0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266"
+}
 
   beforeEach(async function () {
     [CreatorUpgrader, GlobalUpgrader, GlobalMinter, CreatorMinter, Platform, FactoryOwner, TestArtist] =
@@ -170,4 +175,30 @@ describe("Blueprint Factory Deployer Tests", function () {
         expect((await creatorBlueprints.blueprint()).saleEndTimestamp).to.equal(preparationConfig._saleEndTimestamp)
       });
   });
+
+  it("changeDefaultCreatorBlueprintsAdmins", async function () {
+    blueprintFactory = blueprintFactory.connect(FactoryOwner);
+    await expect(blueprintFactory.changeDefaultCreatorBlueprintsAdmins({ ...newDefaultAdmins, minter: ethers.constants.AddressZero }))
+        .be.revertedWith("Invalid address")
+
+    await expect(blueprintFactory.changeDefaultCreatorBlueprintsAdmins(newDefaultAdmins))
+    expect(await blueprintFactory.defaultCreatorBlueprintsAdmins()).to.eql([
+        newDefaultAdmins.platform,
+        newDefaultAdmins.minter,
+        newDefaultAdmins.asyncSaleFeesRecipient
+    ])
+  })
+
+  it("changeDefaultCreatorBlueprintsAdmins", async function () {
+    blueprintFactory = blueprintFactory.connect(FactoryOwner);
+    await expect(blueprintFactory.changeDefaultBlueprintV12Admins({ ...newDefaultAdmins, minter: ethers.constants.AddressZero }))
+        .be.revertedWith("Invalid address")
+
+    await expect(blueprintFactory.changeDefaultBlueprintV12Admins(newDefaultAdmins))
+    expect(await blueprintFactory.defaultBlueprintV12Admins()).to.eql([
+        newDefaultAdmins.platform,
+        newDefaultAdmins.minter,
+        newDefaultAdmins.asyncSaleFeesRecipient
+    ])
+  })
 });
