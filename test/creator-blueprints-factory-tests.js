@@ -21,6 +21,22 @@ describe("Blueprint Factory Deployer Tests", function () {
   const blueprintPlatformId = "mongo-id"
   const royaltyRecipients = ["0x3C44CdDdB6a900fa2b585dd299e03d12FA4293BC", "0x70997970C51812dc3A010C7d01b50e0d17dc79C8"]
   const allocations = [500000, 500000]
+  const primaryFees = {
+      primaryFeeBPS: [50, 50],
+      primaryFeeRecipients: allocations
+  }
+  const preparationConfig = {
+    _capacity: 10,
+    _price: 10,
+    _erc20Token: ethers.constants.AddressZero,
+    _blueprintMetaData: "test metadata",
+    _baseTokenUri: "test uri",
+    _merkleroot: ethers.constants.HashZero,
+    _mintAmountArtist: 5,
+    _mintAmountPlatform: 5,
+    _maxPurchaseAmount: 2,
+    _saleEndTimestamp: 100000000000000
+  }
 
   beforeEach(async function () {
     [CreatorUpgrader, GlobalUpgrader, GlobalMinter, CreatorMinter, Platform, FactoryOwner, TestArtist] =
@@ -78,6 +94,29 @@ describe("Blueprint Factory Deployer Tests", function () {
             royaltyRecipients, 
             allocations, 
             royaltyCutBPS, 
+            blueprintPlatformId
+        )
+        const receipt = await tx.wait()
+        const log = receipt.logs.pop()
+        const splitAddress = "0x" + log.topics.pop().slice(26)
+        const creatorBlueprintsAddress = "0x" + log.topics[1].slice(26)
+        const creatorBlueprints = new ethers.Contract(creatorBlueprintsAddress, creatorBlueprintsABI.abi, provider);
+        expect(await creatorBlueprints.name()).to.equal(creatorsInput.name);
+        expect(await creatorBlueprints.symbol()).to.equal(creatorsInput.symbol);
+        expect(await creatorBlueprints.platform()).to.equal(Platform.address);
+        expect(await creatorBlueprints.minterAddress()).to.equal(CreatorMinter.address);
+        expect(await creatorBlueprints.asyncSaleFeesRecipient()).to.equal(Platform.address); 
+        expect(await creatorBlueprints.artist()).to.equal(creatorsInput.artist); 
+        expect(await creatorBlueprints.royaltyParameters()).to.eql([ethers.utils.getAddress(splitAddress), royaltyCutBPS])
+      });
+
+      it("deployRoyaltySplitterAndPrepareCreatorBlueprints", async function() {
+        const tx = await blueprintFactory.deployRoyaltySplitterAndPrepareCreatorBlueprints(
+            creatorsInput, 
+            preparationConfig,
+            primaryFees,
+            royaltyCutBPS, 
+            sampleSplit,
             blueprintPlatformId
         )
         const receipt = await tx.wait()
