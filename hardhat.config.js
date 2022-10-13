@@ -49,14 +49,14 @@ module.exports = {
       allowUnlimitedContractSize: true,
       initialBaseFeePerGas: 0,
     },
-    goerli: {
+    goerli: evmPrivateKey ? {
       url: "https://goerli.infura.io/v3/9aa3d95b3bc440fa88ea12eaa4456161",
-      accounts: evmPrivateKey ? [evmPrivateKey] : null
-    },
-    mainnet: {
+      accounts: [evmPrivateKey]
+    } : { url: "https://goerli.infura.io/v3/9aa3d95b3bc440fa88ea12eaa4456161" },
+    mainnet: evmPrivateKey ? {
       url: "https://mainnet.infura.io/v3/9aa3d95b3bc440fa88ea12eaa4456161",
-      accounts: evmPrivateKey ? [evmPrivateKey] : null
-    }
+      accounts: [evmPrivateKey]
+    } : { url: "https://mainnet.infura.io/v3/9aa3d95b3bc440fa88ea12eaa4456161" }
   },
   etherscan: {
     // Your API key for Etherscan
