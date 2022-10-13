@@ -110,9 +110,9 @@ Latest deployments:
 
 **Goerli**
 
-Factory: https://goerli.etherscan.io/address/0xe9505D34Fe7e7e8E4c3a30B81E14Fd38c261f3b8#code
-CreatorBlueprints Beacon: https://goerli.etherscan.io/address/0x7548C1824E9f5ac26742673c5bc8dAA3010c0eC8#code
-BlueprintV12 Beacon: https://goerli.etherscan.io/address/0xd7ca12df6c2b29ee190c5518c4d68d33aabb512c#code
+Factory: https://goerli.etherscan.io/address/0xcd104F999f1aC224fEBeFA054515F9C2b38cb925#code
+CreatorBlueprints Beacon: https://goerli.etherscan.io/address/0xE1a12a84691A55Ae2a13A712bf58b4A8a9AaC05B#code
+BlueprintV12 Beacon: https://goerli.etherscan.io/address/0xc3E5CE463Ccf7158cE45c08B15c7B34884DE0684c#code
 
 **Rinkeby**
 
