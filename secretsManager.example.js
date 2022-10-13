@@ -1,10 +1,10 @@
-const rinkebyPrivateKey = "";
+const evmPrivateKey = "";
 const alchemyUrl = "";
 const etherscanApiKey = "";
 const coinmarketCapKey = "";
 
 module.exports = {
-  rinkebyPrivateKey,
+  evmPrivateKey,
   alchemyUrl,
   etherscanApiKey,
   coinmarketCapKey,

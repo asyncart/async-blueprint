@@ -8,10 +8,10 @@ require("@openzeppelin/hardhat-upgrades");
 require('hardhat-contract-sizer');
 
 const {
-  alchemyUrl,
+  evmPrivateKey,
   etherscanApiKey,
   coinmarketCapKey,
-} = require("./secretsManager.example.js");
+} = require("./secretsManager.example");
 
 require("./tasks/deploy");
 require("./tasks/factory")
@@ -49,12 +49,14 @@ module.exports = {
       allowUnlimitedContractSize: true,
       initialBaseFeePerGas: 0,
     },
-    rinkeby: {
-      url: "https://rinkeby.infura.io/v3/9aa3d95b3bc440fa88ea12eaa4456161"
-    },
-    goerli: {
-      url: "https://goerli.infura.io/v3/9aa3d95b3bc440fa88ea12eaa4456161"
-    }
+    goerli: evmPrivateKey ? {
+      url: "https://goerli.infura.io/v3/9aa3d95b3bc440fa88ea12eaa4456161",
+      accounts: [evmPrivateKey]
+    } : { url: "https://goerli.infura.io/v3/9aa3d95b3bc440fa88ea12eaa4456161" },
+    mainnet: evmPrivateKey ? {
+      url: "https://mainnet.infura.io/v3/9aa3d95b3bc440fa88ea12eaa4456161",
+      accounts: [evmPrivateKey]
+    } : { url: "https://mainnet.infura.io/v3/9aa3d95b3bc440fa88ea12eaa4456161" }
   },
   etherscan: {
     // Your API key for Etherscan
