@@ -205,7 +205,7 @@ contract CreatorBlueprints is
     modifier isBlueprintPrepared() {
         require(
             blueprint.saleState != SaleState.not_prepared,
-            "not prepared"
+            "!prepared"
         );
         _;
     }
@@ -214,7 +214,7 @@ contract CreatorBlueprints is
      * @dev Checks if blueprint sale is ongoing
      */
     modifier isSaleOngoing() {
-        require(_isSaleOngoing(), "Sale not ongoing");
+        require(_isSaleOngoing(), "!ongoing");
         _;
     }
 
@@ -227,7 +227,7 @@ contract CreatorBlueprints is
     ) {
         require(
             blueprint.capacity >= _quantity,
-            "quantity exceeds capacity"
+            "quantity >"
         );
         _;
     }
@@ -350,13 +350,13 @@ contract CreatorBlueprints is
     ) internal pure returns (bool) {
         require(
             _feeRecipients.length == _feeBPS.length,
-            "mismatched recipients & Bps"
+            "invalid"
         );
         uint32 totalPercent;
         for (uint256 i; i < _feeBPS.length; i++) {
             totalPercent = totalPercent + _feeBPS[i];
         }
-        require(totalPercent <= 10000, "Fee Bps > maximum");
+        require(totalPercent <= 10000, "bps >");
         return true;
     }
 
@@ -536,7 +536,7 @@ contract CreatorBlueprints is
     function unpauseSale() external onlyRole(MINTER_ROLE) isSaleEndTimestampCurrentlyValid(blueprint.saleEndTimestamp) {
         require(
             blueprint.saleState == SaleState.paused,
-            "Sale not paused"
+            "!paused"
         );
         blueprint.saleState = SaleState.started;
         emit SaleUnpaused();
@@ -653,24 +653,24 @@ contract CreatorBlueprints is
         address _artist = artist; // cache
         require(
             _isBlueprintPreparedAndNotStarted() || _isSaleOngoing(),
-            "Must be presale or public sale"
+            "not pre/public sale"
         );
         require(
             minterAddress == msg.sender ||
                 _artist == msg.sender,
-            "user cannot mint presale"
+            "unauthorized"
         );
 
         if (minterAddress == msg.sender) {
             require(
                 quantity <= blueprint.mintAmountPlatform,
-                "cannot mint quantity"
+                "quantity >"
             );
             blueprint.mintAmountPlatform -= quantity;
         } else if (_artist == msg.sender) {
             require(
                 quantity <= blueprint.mintAmountArtist,
-                "cannot mint quantity"
+                "quantity >"
             );
             blueprint.mintAmountArtist -= quantity;
         }
@@ -726,17 +726,17 @@ contract CreatorBlueprints is
         address _erc20Token = blueprint.ERC20Token;
         uint128 _price = blueprint.price;
         if (_erc20Token == address(0)) {
-            require(_tokenAmount == 0, "cannot specify token amount");
+            require(_tokenAmount == 0, "tokenAmount != 0");
             require(
                 msg.value == _quantity * _price,
-                "Purchase amount must match price"
+                "$ != expected"
             );
             _payFeesAndArtist(_erc20Token, msg.value, _artist);
         } else {
-            require(msg.value == 0, "cannot specify eth amount");
+            require(msg.value == 0, "eth value != 0");
             require(
                 _tokenAmount == _quantity * _price,
-                "Purchase amount must match price"
+                "$ != expected"
             );
 
             IERC20(_erc20Token).transferFrom(
