@@ -109,18 +109,20 @@ yarn verify <implementation_address>
 ## Latest Deployments
 
 **Mainnet**
-Factory: https://etherscan.io/address/0xAB98CD0e04Bb1FCd6320611fCAD6a7e534d8B302 
-BlueprintV12 Beacon: https://etherscan.io/address/0x8fDA94A8DEAacA397DF8c6d3C87d458126e91212
-CreatorBlueprints Beacon: https://etherscan.io/address/0x78896B7392a6aD0D0BFA89833BA57bC572784E41
+
+
+- Factory: https://etherscan.io/address/0xAB98CD0e04Bb1FCd6320611fCAD6a7e534d8B302 
+- BlueprintV12 Beacon: https://etherscan.io/address/0x8fDA94A8DEAacA397DF8c6d3C87d458126e91212
+- CreatorBlueprints Beacon: https://etherscan.io/address/0x78896B7392a6aD0D0BFA89833BA57bC572784E41
 
 **Goerli**
 
-Factory: https://goerli.etherscan.io/address/0xcd104F999f1aC224fEBeFA054515F9C2b38cb925#code
-CreatorBlueprints Beacon: https://goerli.etherscan.io/address/0xE1a12a84691A55Ae2a13A712bf58b4A8a9AaC05B#code
-BlueprintV12 Beacon: https://goerli.etherscan.io/address/0xc3E5CE463Ccf7158cE45c08B15c7B34884DE0684c#code
+- Factory: https://goerli.etherscan.io/address/0xcd104F999f1aC224fEBeFA054515F9C2b38cb925#code
+- CreatorBlueprints Beacon: https://goerli.etherscan.io/address/0xE1a12a84691A55Ae2a13A712bf58b4A8a9AaC05B#code
+- BlueprintV12 Beacon: https://goerli.etherscan.io/address/0xc3E5CE463Ccf7158cE45c08B15c7B34884DE0684c#code
 
 **Rinkeby**
 
-Factory: https://rinkeby.etherscan.io/address/0xD9F38199E7D04c1CDaD8CEC869a8C92b2dA4D847#code
-CreatorBlueprints Beacon: https://rinkeby.etherscan.io/address/0x2cfe0a2c50960643940fd987751e3d39c72c3984#code 
-BlueprintV12 Beacon: https://rinkeby.etherscan.io/address/0xa79bfc20657460fab0b492c69f160fcb23648615#code
+- Factory: https://rinkeby.etherscan.io/address/0xD9F38199E7D04c1CDaD8CEC869a8C92b2dA4D847#code
+- CreatorBlueprints Beacon: https://rinkeby.etherscan.io/address/0x2cfe0a2c50960643940fd987751e3d39c72c3984#code 
+- BlueprintV12 Beacon: https://rinkeby.etherscan.io/address/0xa79bfc20657460fab0b492c69f160fcb23648615#code
