@@ -37,8 +37,8 @@ contract BlueprintsFactory is Ownable {
      * @param blueprintPlatformID Platform's identification of blueprint
      */
     event CreatorBlueprintDeployed(
-        address creatorBlueprint,
-        address royaltySplit,
+        address indexed creatorBlueprint,
+        address indexed royaltySplit,
         string blueprintPlatformID
     );
 
@@ -47,7 +47,7 @@ contract BlueprintsFactory is Ownable {
      * @param blueprintV12 Address of deployed BlueprintV12 BeaconProxy 
      */
     event BlueprintV12Deployed(
-        address blueprintV12
+        address indexed blueprintV12
     );
 
     /**
@@ -108,8 +108,8 @@ contract BlueprintsFactory is Ownable {
         _splitMain = splitMain; 
 
         // start off with both set of default admins being the same
-        defaultCreatorBlueprintsAdmins = IBlueprintTypes.Admins(_platform, _platform, creatorBlueprintsMinter);
-        defaultBlueprintV12Admins =  IBlueprintTypes.Admins(_platform, _platform, creatorBlueprintsMinter);
+        defaultCreatorBlueprintsAdmins = IBlueprintTypes.Admins(_platform, creatorBlueprintsMinter, _platform);
+        defaultBlueprintV12Admins =  IBlueprintTypes.Admins(_platform, globalBlueprintsMinter, _platform);
 
         _transferOwnership(factoryOwner);
 
