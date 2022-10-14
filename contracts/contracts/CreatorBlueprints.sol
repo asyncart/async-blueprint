@@ -443,6 +443,7 @@ contract CreatorBlueprints is
     )   external 
         onlyRole(MINTER_ROLE)
     {
+        require(blueprint.saleState == SaleState.not_prepared, "already prepared");
         blueprint.capacity = config._capacity;
         blueprint.price = config._price;
 

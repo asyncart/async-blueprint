@@ -90,7 +90,7 @@ describe("Prepare Blueprint", function () {
       // initialize the global blueprints contract
       blueprint.initialize("Async Blueprint", "ABP", [ContractOwner.address, ContractOwner.address, ContractOwner.address], splitMain.address);
     });
-    describe("1: should prepare the blueprint", function () {
+    describe("1: should allow single preparation of blueprint", function () {
       function assertBlueprintMatchesExpectation(result, isCreatorBlueprint = false) {
         if (!isCreatorBlueprint) {
           expect(result.artist).to.be.equal(testArtist.address);
@@ -127,6 +127,30 @@ describe("Prepare Blueprint", function () {
         );
         let result = await blueprint.blueprints(0);
         assertBlueprintMatchesExpectation(result);
+
+        // show that second preparation just makes prepares the next blueprint
+        await blueprint
+        .connect(ContractOwner)
+        .prepareBlueprint(
+          testArtist.address,
+          [
+            tenThousandPieces,
+            oneEth,
+            zeroAddress,
+            testHash,
+            testUri,
+            this.merkleTree.getHexRoot(),
+            0,
+            0,
+            0,
+            BigNumber.from(0)
+          ],
+          feesInput
+        );
+        result = await blueprint.blueprints(1);
+        expect(result.saleState.toString()).to.be.equal(
+          BigNumber.from(1).toString()
+        );
       });
       it("CreatorBlueprint", async function() {
         await creatorBlueprint
@@ -151,6 +175,29 @@ describe("Prepare Blueprint", function () {
         );
         let result = await creatorBlueprint.blueprint();
         assertBlueprintMatchesExpectation(result, true);
+
+        // should now allow preparation of blueprint again
+        await expect(
+          creatorBlueprint
+            .connect(ContractOwner)
+            .prepareBlueprint(
+              [
+                tenThousandPieces,
+                oneEth,
+                zeroAddress,
+                testHash,
+                testUri,
+                this.merkleTree.getHexRoot(),
+                0,
+                0,
+                0,
+                BigNumber.from(0)
+              ],
+              [
+                [1000, 9000],
+                [ContractOwner.address, testArtist.address]
+              ]
+        )).to.be.revertedWith("already prepared");
       });
     });
     describe("should not allow timestamp to be a value in the past", function () {
