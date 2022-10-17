@@ -38,7 +38,7 @@ contract BlueprintV12 is
     uint32 public defaultPlatformSecondarySalePercentage;
 
     /**
-     * @dev Token id of last ERC721 NFT minted
+     * @dev First token ID of the next Blueprint to be prepared
      */ 
     uint64 public latestErc721TokenIndex;
 
@@ -144,7 +144,7 @@ contract BlueprintV12 is
      * @param mintAmountArtist Amount of NFTs of Blueprint mintable by artist
      * @param mintAmountArtist Amount of NFTs of Blueprint mintable by platform 
      * @param capacity Number of NFTs in Blueprint 
-     * @param erc721TokenIndex Token ID of last NFT minted for Blueprint
+     * @param erc721TokenIndex First token ID of the next Blueprint to be prepared
      * @param maxPurchaseAmount Max number of NFTs purchasable in a single transaction
      * @param saleEndTimestamp Timestamp when the sale ends 
      * @param price Price per NFT in Blueprint
