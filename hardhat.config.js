@@ -5,13 +5,17 @@ require("@nomiclabs/hardhat-etherscan");
 require("hardhat-deploy");
 require("@nomiclabs/hardhat-ethers");
 require("@openzeppelin/hardhat-upgrades");
+require('hardhat-contract-sizer');
 
 const {
-  rinkebyPrivateKey,
-  alchemyUrl,
+  evmPrivateKey,
   etherscanApiKey,
   coinmarketCapKey,
-} = require("./secretsManager.example.js");
+} = require("./secretsManager.example");
+
+require("./tasks/deploy");
+require("./tasks/factory")
+require("./tasks/royalties");
 
 module.exports = {
   solidity: {
@@ -19,7 +23,7 @@ module.exports = {
     settings: {
       optimizer: {
         enabled: true,
-        runs: 200,
+        runs: 1,
       },
     },
   },
@@ -30,7 +34,7 @@ module.exports = {
     coinmarketcap: coinmarketCapKey,
   },
   paths: {
-    deploy: "./contracts/deploy",
+    // deploy: "./contracts/deploy",
     deployments: "deployments",
     imports: "imports",
     tests: "./test",
@@ -40,19 +44,26 @@ module.exports = {
   namedAccounts: {
     deployer: 0,
   },
-  // networks: {
-  //   hardhat: {
-  //     allowUnlimitedContractSize: true,
-  //     initialBaseFeePerGas: 0,
-  //   },
-  //   rinkeby: {
-  //     url: alchemyUrl,
-  //     accounts: [`0x${rinkebyPrivateKey}`],
-  //   },
-  // },
-  // etherscan: {
-  //   // Your API key for Etherscan
-  //   // Obtain one at https://etherscan.io/
-  //   apiKey: etherscanApiKey,
-  // },
+  networks: {
+    hardhat: {
+      allowUnlimitedContractSize: true,
+      initialBaseFeePerGas: 0,
+    },
+    goerli: evmPrivateKey ? {
+      url: "https://goerli.infura.io/v3/9aa3d95b3bc440fa88ea12eaa4456161",
+      accounts: [evmPrivateKey]
+    } : { url: "https://goerli.infura.io/v3/9aa3d95b3bc440fa88ea12eaa4456161" },
+    mainnet: evmPrivateKey ? {
+      url: "https://mainnet.infura.io/v3/9aa3d95b3bc440fa88ea12eaa4456161",
+      accounts: [evmPrivateKey]
+    } : { url: "https://mainnet.infura.io/v3/9aa3d95b3bc440fa88ea12eaa4456161" }
+  },
+  etherscan: {
+    // Your API key for Etherscan
+    // Obtain one at https://etherscan.io/
+    apiKey: etherscanApiKey,
+  },
+  contractSizer: {
+    runOnCompile: true
+  }
 };

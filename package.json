@@ -6,21 +6,28 @@
     "coverage": "hardhat coverage",
     "deploy": "hardhat deploy",
     "deploy-rinkeby": "hardhat deploy --network rinkeby",
-    "verify": "npx hardhat verify --network rinkeby"
+    "verify": "npx hardhat verify",
+    "clean": "hardhat clean",
+    "build-blueprints-contracts": "sol-merger \"./contracts/contracts/*.sol\" ./build",
+    "build-deployment-contracts": "sol-merger \"./contracts/contracts/deployment/*.sol\" ./build",
+    "build-beacon-contract": "sol-merger \"./node_modules/@openzeppelin/contracts/proxy/beacon/UpgradeableBeacon.sol\" ./build"
   },
   "dependencies": {
     "@nomiclabs/hardhat-ethers": "^2.0.2",
     "@nomiclabs/hardhat-waffle": "^2.0.1",
-    "@openzeppelin/contracts": "^4.2.0",
+    "@openzeppelin/contracts": "^4.7.0",
     "@openzeppelin/contracts-upgradeable": "^4.3.2",
     "@openzeppelin/hardhat-upgrades": "^1.10.0",
+    "@rari-capital/solmate": "^6.4.0",
     "chai": "^4.3.4",
     "ethereum-waffle": "^3.4.0",
     "ethers": "^5.4.7",
     "hardhat": "^2.4.1",
+    "hardhat-contract-sizer": "^2.6.1",
     "hardhat-gas-reporter": "^1.0.4",
     "keccak256": "^1.0.3",
     "merkletreejs": "^0.2.24",
+    "sol-merger": "^4.1.1",
     "solidity-coverage": "^0.7.16"
   },
   "devDependencies": {
