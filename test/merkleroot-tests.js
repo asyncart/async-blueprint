@@ -38,14 +38,6 @@ function hashToken(account, quantity) {
   );
 }
 
-function computeMerkleFromMapping(mapping) {
-  return new MerkleTree(
-    Object.entries(mapping).map((mapping) => hashToken(...mapping)),
-    keccak256,
-    { sortPairs: true }
-  );
-}
-
 describe("Merkleroot Tests", function () {
 
   // whitelist mapping
@@ -320,8 +312,6 @@ describe("Merkleroot Tests", function () {
         expect(result.capacity.toString()).to.be.equal(
           BigNumber.from(creatorCapacity).toString()
         );
-        mappingCreator[account] = (parseInt(quantity) - parseInt(quantityToPurchase)).toString()
-        this.creatorMerkleTree = computeMerkleFromMapping(mappingCreator)
         expect(result.merkleroot).to.be.equal(this.creatorMerkleTree.getHexRoot());
         //should end on the next index
         //this user owns 0 - 9, next user will own 10 - x
@@ -331,10 +321,10 @@ describe("Merkleroot Tests", function () {
         );
 
         // purchase second half of whitelisted amount
-        proof = this.creatorMerkleTree.getHexProof(hashToken(account, quantityToPurchase));
+        proof = this.creatorMerkleTree.getHexProof(hashToken(account, quantity));
         await creatorBlueprint
           .connect(buyer)
-          .purchaseBlueprints(quantityToPurchase, quantityToPurchase, 0, proof, { value: blueprintValue });
+          .purchaseBlueprints(quantityToPurchase, quantity, 0, proof, { value: blueprintValue });
 
         // assert on state changes of second purchase
         result = await creatorBlueprint.blueprint();
@@ -342,20 +332,16 @@ describe("Merkleroot Tests", function () {
         expect(result.capacity.toString()).to.be.equal(
           BigNumber.from(creatorCapacity).toString()
         );
-        mappingCreator[account] = "0"
-        this.creatorMerkleTree = computeMerkleFromMapping(mappingCreator)
         expect(result.merkleroot).to.be.equal(this.creatorMerkleTree.getHexRoot());
-        //should end on the next index
-        //this user owns 0 - 9, next user will own 10 - x
         creatorIndex = creatorIndex.add(BigNumber.from(quantityToPurchase));
         expect(result.erc721TokenIndex.toString()).to.be.equal(
           BigNumber.from(creatorIndex).toString()
         );
 
-        // Assert that we cannot buy anymore, not the best assertion,
-        proof = this.creatorMerkleTree.getHexProof(hashToken(account, "0"));
+        // Assert that we cannot buy anymore
+        proof = this.creatorMerkleTree.getHexProof(hashToken(account, quantity));
         await expect(
-          creatorBlueprint.connect(buyer).purchaseBlueprints(1, 1, 0, proof, {
+          creatorBlueprint.connect(buyer).purchaseBlueprints(1, quantity, 0, proof, {
             value: blueprintValue,
           })
         ).to.be.revertedWith("e");
@@ -383,8 +369,6 @@ describe("Merkleroot Tests", function () {
         expect(result.capacity.toString()).to.be.equal(
           BigNumber.from(capacity).toString()
         );
-        mapping[account] = (parseInt(quantity) - parseInt(quantityToPurchase)).toString()
-        this.merkleTree = computeMerkleFromMapping(mapping)
         expect(result.merkleroot).to.be.equal(this.merkleTree.getHexRoot());
         //should end on the next index
         //this user owns 0 - 9, next user will own 10 - x
@@ -394,10 +378,10 @@ describe("Merkleroot Tests", function () {
         );
 
         // purchase second half of whitelisted amount
-        proof = this.merkleTree.getHexProof(hashToken(account, quantityToPurchase));
+        proof = this.merkleTree.getHexProof(hashToken(account, quantity));
         await blueprint
           .connect(buyer)
-          .purchaseBlueprints(0, quantityToPurchase, quantityToPurchase, 0, proof, { value: blueprintValue });
+          .purchaseBlueprints(0, quantityToPurchase, quantity, 0, proof, { value: blueprintValue });
 
         // assert on state changes of second purchase
         result = await blueprint.blueprints(0);
@@ -405,20 +389,16 @@ describe("Merkleroot Tests", function () {
         expect(result.capacity.toString()).to.be.equal(
           BigNumber.from(capacity).toString()
         );
-        mapping[account] = "0"
-        this.merkleTree = computeMerkleFromMapping(mapping)
         expect(result.merkleroot).to.be.equal(this.merkleTree.getHexRoot());
-        //should end on the next index
-        //this user owns 0 - 9, next user will own 10 - x
         index = index.add(BigNumber.from(quantityToPurchase));
         expect(result.erc721TokenIndex.toString()).to.be.equal(
           BigNumber.from(index).toString()
         );
 
         // Assert that we cannot buy anymore, not the best assertion,
-        proof = this.merkleTree.getHexProof(hashToken(account, "0"));
+        proof = this.merkleTree.getHexProof(hashToken(account, quantity));
         await expect(
-          blueprint.connect(buyer).purchaseBlueprints(0, 1, 1, 0, proof, {
+          blueprint.connect(buyer).purchaseBlueprints(0, 1, quantity, 0, proof, {
             value: blueprintValue,
           })
         ).to.be.revertedWith("e");

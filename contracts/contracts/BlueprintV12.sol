@@ -88,6 +88,12 @@ contract BlueprintV12 is
     bytes32 public constant MINTER_ROLE = keccak256("MINTER_ROLE");
 
     /**
+     * @dev Tracks the number of whitelisted purchases by each address per blueprint
+     * @dev This mapping is outside of the BP struct because it was added as part of an upgrade, and must be placed at the end of storage to avoid overwriting
+     */
+    mapping(uint256 => mapping(address => uint256)) whitelistedPurchases;
+
+    /**
      * @dev Tracks state of Blueprint sale
      */
     enum SaleState {
@@ -622,25 +628,6 @@ contract BlueprintV12 is
     }
 
     /**
-     * @dev Update a blueprint's merkle tree root 
-     * @param blueprintID Blueprint ID 
-     * @param oldProof Old proof for leaf being updated, used for validation 
-     * @param remainingWhitelistAmount Remaining whitelist amount of NFTs 
-     */
-    function _updateMerkleRootForPurchase(
-        uint256 blueprintID,
-        bytes32[] memory oldProof,
-        uint32 remainingWhitelistAmount
-    ) 
-        internal
-    {
-        bool[] memory proofFlags = new bool[](oldProof.length);
-        bytes32[] memory leaves = new bytes32[](1);
-        leaves[0] = _leaf(msg.sender, uint256(remainingWhitelistAmount));
-        blueprints[blueprintID].merkleroot = MerkleProof.processMultiProof(oldProof, proofFlags, leaves);
-    }
-
-    /**
      * @dev Purchase NFTs of a blueprint to a recipient address
      * @param blueprintID Blueprint ID
      * @param purchaseQuantity How many NFTs to purchase 
@@ -663,8 +650,8 @@ contract BlueprintV12 is
         isQuantityAvailableForPurchase(blueprintID, purchaseQuantity)
     {
         if (_isWhitelistedAndPresale(blueprintID, whitelistedQuantity, proof)) {
-            require(purchaseQuantity <= whitelistedQuantity, "> whitelisted amount");
-            _updateMerkleRootForPurchase(blueprintID, proof, whitelistedQuantity - purchaseQuantity);
+            require(whitelistedPurchases[blueprintID][msg.sender] + purchaseQuantity <= whitelistedQuantity, "> whitelisted amount");
+            whitelistedPurchases[blueprintID][msg.sender] += purchaseQuantity;
         } else {
             require(_isSaleOngoing(blueprintID), "unavailable");
         }
@@ -706,8 +693,8 @@ contract BlueprintV12 is
         isQuantityAvailableForPurchase(blueprintID, purchaseQuantity)
     {
         if (_isWhitelistedAndPresale(blueprintID, whitelistedQuantity, proof)) {
-            require(purchaseQuantity <= whitelistedQuantity, "> whitelisted amount");
-            _updateMerkleRootForPurchase(blueprintID, proof, whitelistedQuantity - purchaseQuantity);
+            require(whitelistedPurchases[blueprintID][msg.sender] + purchaseQuantity <= whitelistedQuantity, "> whitelisted amount");
+            whitelistedPurchases[blueprintID][msg.sender] += purchaseQuantity;
         } else {
             require(_isSaleOngoing(blueprintID), "unavailable");
         }

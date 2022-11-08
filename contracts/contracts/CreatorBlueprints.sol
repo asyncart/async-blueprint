@@ -76,6 +76,12 @@ contract CreatorBlueprints is
      */
     bytes32 public constant MINTER_ROLE = keccak256("MINTER_ROLE");
 
+    /*  
+     * @dev A mapping from whitelisted addresses to amout of pre-sale blueprints purchased
+     * @dev This is seperate from the Blueprint struct because it was introduced as part of an upgrade, and needs to be placed at the end of storage to avoid overwriting.
+     */
+     mapping(address => uint256) whitelistedPurchases; 
+
     /**
      * @dev Tracks state of Blueprint sale
      */
@@ -544,23 +550,6 @@ contract CreatorBlueprints is
     }
 
     /**
-     * @dev Update blueprint's merkle tree root 
-     * @param oldProof Old proof for leaf being updated, used for validation 
-     * @param remainingWhitelistAmount Remaining whitelist amount of NFTs 
-     */
-    function _updateMerkleRootForPurchase(
-        bytes32[] memory oldProof,
-        uint32 remainingWhitelistAmount
-    ) 
-        internal
-    {
-        bool[] memory proofFlags = new bool[](oldProof.length);
-        bytes32[] memory leaves = new bytes32[](1);
-        leaves[0] = _leaf(msg.sender, uint256(remainingWhitelistAmount));
-        blueprint.merkleroot = MerkleProof.processMultiProof(oldProof, proofFlags, leaves);
-    }
-
-    /**
      * @dev Purchase NFTs of blueprint to a recipient address
      * @param purchaseQuantity How many NFTs to purchase 
      * @param whitelistedQuantity How many NFTS are whitelisted for the blueprint 
@@ -581,8 +570,8 @@ contract CreatorBlueprints is
         isQuantityAvailableForPurchase(purchaseQuantity)
     {
         if (_isWhitelistedAndPresale(whitelistedQuantity, proof)) {
-            require(purchaseQuantity <= whitelistedQuantity, "> whitelisted amount");
-            _updateMerkleRootForPurchase(proof, whitelistedQuantity - purchaseQuantity);
+            require(whitelistedPurchases[msg.sender] + purchaseQuantity <= whitelistedQuantity, "> whitelisted amount");
+            whitelistedPurchases[msg.sender] += purchaseQuantity;
         } else {
             require(_isSaleOngoing(), "unavailable");
         }
@@ -620,8 +609,8 @@ contract CreatorBlueprints is
         isQuantityAvailableForPurchase(purchaseQuantity)
     {
         if (_isWhitelistedAndPresale(whitelistedQuantity, proof)) {
-            require(purchaseQuantity <= whitelistedQuantity, "> whitelisted amount");
-            _updateMerkleRootForPurchase(proof, whitelistedQuantity - purchaseQuantity);
+            require(whitelistedPurchases[msg.sender] + purchaseQuantity <= whitelistedQuantity, "> whitelisted amount");
+            whitelistedPurchases[msg.sender] += purchaseQuantity;
         } else {
             require(_isSaleOngoing(), "unavailable");
         }
