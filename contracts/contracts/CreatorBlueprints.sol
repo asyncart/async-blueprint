@@ -80,7 +80,7 @@ contract CreatorBlueprints is
      * @dev A mapping from whitelisted addresses to amout of pre-sale blueprints purchased
      * @dev This is seperate from the Blueprint struct because it was introduced as part of an upgrade, and needs to be placed at the end of storage to avoid overwriting.
      */
-     mapping(address => uint256) whitelistedPurchases; 
+     mapping(address => uint32) whitelistedPurchases; 
 
     /**
      * @dev Tracks state of Blueprint sale

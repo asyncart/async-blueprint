@@ -91,7 +91,7 @@ contract BlueprintV12 is
      * @dev Tracks the number of whitelisted purchases by each address per blueprint
      * @dev This mapping is outside of the BP struct because it was added as part of an upgrade, and must be placed at the end of storage to avoid overwriting
      */
-    mapping(uint256 => mapping(address => uint256)) whitelistedPurchases;
+    mapping(uint256 => mapping(address => uint32)) whitelistedPurchases;
 
     /**
      * @dev Tracks state of Blueprint sale
