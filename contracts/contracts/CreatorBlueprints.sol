@@ -478,6 +478,16 @@ contract CreatorBlueprints is
     }
 
     /**
+     * @dev Update a blueprint's merkleroot
+     * @param _newMerkleroot New merkleroot
+     */
+    function updateBlueprintMerkleroot (
+        bytes32 _newMerkleroot
+    ) external onlyRole(MINTER_ROLE) {
+        blueprint.merkleroot = _newMerkleroot;
+    }
+
+    /**
      * @dev Update a blueprint's capacity 
      * @param _newCapacity New capacity
      * @param _newLatestErc721TokenIndex Newly adjusted last ERC721 token id 

@@ -527,6 +527,18 @@ contract BlueprintV12 is
     }
 
     /**
+     * @dev Update a blueprint's merkleroot
+     * @param _blueprintID Blueprint ID
+     * @param _newMerkleroot New merkleroot
+     */
+    function updateBlueprintMerkleroot (
+        uint256 _blueprintID,
+        bytes32 _newMerkleroot
+    ) external onlyRole(MINTER_ROLE) {
+        blueprints[_blueprintID].merkleroot = _newMerkleroot;
+    }
+
+    /**
      * @dev Update a blueprint's capacity
      * @param _blueprintID Blueprint ID 
      * @param _newCapacity New capacity

@@ -114,6 +114,55 @@ describe("Blueprint Supports Interface Tests", function () {
       expect(platformAddress).to.be.equal(user2.address);
     });
   });
+  describe("2.a: should allow minter to update merkleroot", function () {
+    it("BlueprintV12", async function() {
+      await blueprint
+      .connect(ContractOwner)
+      .prepareBlueprint(
+        testArtist.address,
+        [
+          tenThousandPieces,
+          oneEth,
+          zeroAddress,
+          testHash,
+          testUri,
+          "0x0000000000000000000000000000000000000000000000000000000000000000",
+          0,
+          0,
+          0,
+          0
+        ],
+        feesInput
+      );
+      let updatedMerkleroot = "0x0000000000000000000000000000000000000000000000000000000000000001";
+      await blueprint.connect(ContractOwner).updateBlueprintMerkleroot(0, updatedMerkleroot);
+      let result = await blueprint.blueprints(0);
+      await expect(result.merkleroot).to.be.equal(updatedMerkleroot);
+    });
+    it("CreatorBlueprints", async function() {
+      await creatorBlueprint
+      .connect(ContractOwner)
+      .prepareBlueprint(
+        [
+          tenThousandPieces,
+          oneEth,
+          zeroAddress,
+          testHash,
+          testUri,
+          "0x0000000000000000000000000000000000000000000000000000000000000000",
+          0,
+          0,
+          0,
+          0
+        ],
+        [[], []]
+      );
+      let updatedMerkleroot = "0x0000000000000000000000000000000000000000000000000000000000000001";
+      await creatorBlueprint.connect(ContractOwner).updateBlueprintMerkleroot(updatedMerkleroot);
+      let result = await creatorBlueprint.blueprint();
+      await expect(result.merkleroot).to.be.equal(updatedMerkleroot);
+    });
+  });
   describe("2.a: should allow for updating baseUri", function () {
     it("BlueprintV12", async function() {
       await blueprint
