@@ -119,4 +119,4 @@ yarn verify <implementation_address>
 
 - Factory: https://goerli.etherscan.io/address/0xcd104F999f1aC224fEBeFA054515F9C2b38cb925#code
 - CreatorBlueprints Beacon: https://goerli.etherscan.io/address/0xE1a12a84691A55Ae2a13A712bf58b4A8a9AaC05B#code
-- BlueprintV12 Beacon: https://goerli.etherscan.io/address/0xc3E5CE463Ccf7158cE45c08B15c7B34884DE0684c#code
+- BlueprintV12 Beacon: https://goerli.etherscan.io/address/0xc3E5CE463Ccf7158cE45c08B15c7B34884DE0684#code
