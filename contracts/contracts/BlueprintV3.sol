@@ -1,5 +1,5 @@
 //SPDX-License-Identifier: Unlicense
-pragma solidity 0.8.4;
+pragma solidity ^0.8.13;
 
 import "./abstract/HasSecondarySaleFees.sol";
 
@@ -15,7 +15,7 @@ contract BlueprintV3 is
 {
     using StringsUpgradeable for uint256;
 
-    uint32 public defaultPlatformPrimaryFeePercentage;    
+    uint32 public defaultPlatformPrimaryFeePercentage;
     uint32 public defaultBlueprintSecondarySalePercentage;
     uint32 public defaultPlatformSecondarySalePercentage;
     uint64 public latestErc721TokenIndex;
@@ -24,7 +24,7 @@ contract BlueprintV3 is
     address public asyncSaleFeesRecipient;
     address public platform;
     address public minterAddress;
-    
+
     mapping(uint256 => uint256) tokenToBlueprintID;
     mapping(address => uint256) failedTransferCredits;
     mapping(uint256 => Blueprints) public blueprints;
@@ -44,12 +44,12 @@ contract BlueprintV3 is
         uint64 capacity;
         uint64 erc721TokenIndex;
         uint64 maxPurchaseAmount;
-        uint128 price;          
+        uint128 price;
         address artist;
         address ERC20Token;
         string baseTokenUri;
         bytes32 merkleroot;
-        SaleState saleState;    
+        SaleState saleState;
         uint32[] primaryFeeBPS;
         uint32[] secondaryFeeBPS;
         address[] primaryFeeRecipients;
@@ -284,7 +284,7 @@ contract BlueprintV3 is
     }
 
     function updateWhitelistForBlueprint(
-        uint256 _blueprintID,        
+        uint256 _blueprintID,
         uint32 _mintAmountArtist,
         uint32 _mintAmountPlatform,
         bytes32 _merkleroot
@@ -414,7 +414,7 @@ contract BlueprintV3 is
         uint64 newCap = blueprints[_blueprintID].capacity;
         for (uint16 i = 0; i < _quantity; i++) {
             require(newCap > 0, "blueprint out of capacity");
-            
+
             _mint(msg.sender, newTokenId + i);
             tokenToBlueprintID[newTokenId + i] = _blueprintID;
 

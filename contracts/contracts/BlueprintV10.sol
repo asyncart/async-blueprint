@@ -1,5 +1,5 @@
 //SPDX-License-Identifier: Unlicense
-pragma solidity 0.8.4;
+pragma solidity ^0.8.13;
 
 import "./abstract/HasSecondarySaleFees.sol";
 
@@ -15,7 +15,7 @@ contract BlueprintV10 is
 {
     using StringsUpgradeable for uint256;
 
-    uint32 public defaultPlatformPrimaryFeePercentage;    
+    uint32 public defaultPlatformPrimaryFeePercentage;
     uint32 public defaultBlueprintSecondarySalePercentage;
     uint32 public defaultPlatformSecondarySalePercentage;
     uint64 public latestErc721TokenIndex;
@@ -24,7 +24,7 @@ contract BlueprintV10 is
     address public asyncSaleFeesRecipient;
     address public platform;
     address public minterAddress;
-    
+
     mapping(uint256 => uint256) tokenToBlueprintID;
     mapping(address => uint256) failedTransferCredits;
     mapping(uint256 => Blueprints) public blueprints;
@@ -44,12 +44,12 @@ contract BlueprintV10 is
         uint64 capacity;
         uint64 erc721TokenIndex;
         uint64 maxPurchaseAmount;
-        uint128 price;          
+        uint128 price;
         address artist;
         address ERC20Token;
         string baseTokenUri;
         bytes32 merkleroot;
-        SaleState saleState;    
+        SaleState saleState;
         uint32[] primaryFeeBPS;
         uint32[] secondaryFeeBPS;
         address[] primaryFeeRecipients;
@@ -335,7 +335,7 @@ contract BlueprintV10 is
         blueprints[_blueprintID].mintAmountArtist = _mintAmountArtist;
         blueprints[_blueprintID].mintAmountPlatform = _mintAmountPlatform;
         blueprints[_blueprintID].saleState = SaleState (_newSaleState);
-        blueprints[_blueprintID].merkleroot = _merkleroot; 
+        blueprints[_blueprintID].merkleroot = _merkleroot;
         blueprints[_blueprintID].maxPurchaseAmount = _newMaxPurchaseAmount;
 
         emit BlueprintSettingsUpdated(_blueprintID, _price, _mintAmountArtist, _mintAmountPlatform, _newSaleState, _newMaxPurchaseAmount, _merkleroot);
@@ -496,7 +496,7 @@ contract BlueprintV10 is
         uint64 newCap = blueprints[_blueprintID].capacity;
         for (uint16 i = 0; i < _quantity; i++) {
             require(newCap > 0, "blueprint out of capacity");
-            
+
             _mint(_nftRecipient, newTokenId + i);
             tokenToBlueprintID[newTokenId + i] = _blueprintID;
 
