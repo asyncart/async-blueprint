@@ -8,6 +8,7 @@ import "@openzeppelin/contracts-upgradeable/access/AccessControlEnumerableUpgrad
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "@openzeppelin/contracts/utils/cryptography/MerkleProof.sol";
 import "@openzeppelin/contracts/security/ReentrancyGuard.sol";
+import { DefaultOperatorFiltererUpgradeable } from "./operatorFilterRegistry/upgradeable/DefaultOperatorFiltererUpgradeable.sol";
 
 /**
  * @dev Async Art Blueprint NFT contract with true creator provenance
@@ -15,6 +16,7 @@ import "@openzeppelin/contracts/security/ReentrancyGuard.sol";
  */
 contract CreatorBlueprints is
     ERC721Upgradeable,
+    DefaultOperatorFiltererUpgradeable,
     HasSecondarySaleFees,
     AccessControlEnumerableUpgradeable,
     ReentrancyGuard
@@ -277,6 +279,7 @@ contract CreatorBlueprints is
         ERC721Upgradeable.__ERC721_init(creatorBlueprintsInput.name, creatorBlueprintsInput.symbol);
         HasSecondarySaleFees._initialize();
         AccessControlUpgradeable.__AccessControl_init();
+        __DefaultOperatorFilterer_init();
 
         _setupRole(DEFAULT_ADMIN_ROLE, creatorBlueprintsAdmins.platform);
         _setupRole(MINTER_ROLE, creatorBlueprintsAdmins.minter);
@@ -1136,5 +1139,33 @@ contract CreatorBlueprints is
             ERC721Upgradeable.supportsInterface(interfaceId) ||
             ERC165StorageUpgradeable.supportsInterface(interfaceId) ||
             AccessControlEnumerableUpgradeable.supportsInterface(interfaceId);
+    }
+
+    ////////////////////////////////////
+    /// Required function overide for Operator Filter Registry //////
+    ////////////////////////////////////
+
+    function setApprovalForAll(address operator, bool approved) public override onlyAllowedOperatorApproval(operator) {
+        super.setApprovalForAll(operator, approved);
+    }
+
+    function approve(address operator, uint256 tokenId) public override onlyAllowedOperatorApproval(operator) {
+        super.approve(operator, tokenId);
+    }
+
+    function transferFrom(address from, address to, uint256 tokenId) public override onlyAllowedOperator(from) {
+        super.transferFrom(from, to, tokenId);
+    }
+
+    function safeTransferFrom(address from, address to, uint256 tokenId) public override onlyAllowedOperator(from) {
+        super.safeTransferFrom(from, to, tokenId);
+    }
+
+    function safeTransferFrom(address from, address to, uint256 tokenId, bytes memory data)
+        public
+        override
+        onlyAllowedOperator(from)
+    {
+        super.safeTransferFrom(from, to, tokenId, data);
     }
 }
