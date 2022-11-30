@@ -1154,6 +1154,7 @@ contract CreatorBlueprints is
     // Custom Error Types For Operator Registry Methods
     error OperatorNotAllowed(address operator);
     error OnlyOwner();
+    error ZeroAddressRegistryDisallowed();
 
     /**
      * @dev Restrict operators who are allowed to transfer these tokens
@@ -1180,7 +1181,11 @@ contract CreatorBlueprints is
         if (msg.sender != owner()) {
             revert OnlyOwner();
         }
-        operatorFilterRegistry.registerAndSubscribe(address(this), 0x3cc6CddA760b79bAfa08dF41ECFA224f810dCeB6);
+        IOperatorFilterRegistry registry = operatorFilterRegistry;
+        if (address(registry) == address(0)) {
+            revert ZeroAddressRegistryDisallowed();
+        }
+        registry.registerAndSubscribe(address(this), 0x3cc6CddA760b79bAfa08dF41ECFA224f810dCeB6);
     }
 
     /**
@@ -1192,6 +1197,14 @@ contract CreatorBlueprints is
             revert OnlyOwner();
         }
         operatorFilterRegistry = IOperatorFilterRegistry(newRegistry);
+    }
+
+    /**
+     * @notice Update the address that the contract will make OperatorFilter checks against. Also register this contract with that registry. OnlyOwner.
+     */
+    function updateOperatorFilterAndRegister(address newRegistry) public {
+        updateOperatorFilterRegistryAddress(newRegistry);
+        registerWithOpenSeaOperatorRegistry();
     }
 
     /**
