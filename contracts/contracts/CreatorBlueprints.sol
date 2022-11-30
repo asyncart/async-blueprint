@@ -272,12 +272,14 @@ contract CreatorBlueprints is
      * @param creatorBlueprintsAdmins Administrative accounts 
      * @param _royaltyParameters Initial royalty settings 
      * @param extraMinter Additional address to give minter role
+     * @param restrictOperators Whether or not to restrict transfers and approvals based on OpenSea's operator blacklist
      */
     function initialize(
         CreatorBlueprintsInput calldata creatorBlueprintsInput,
         IBlueprintTypes.Admins calldata creatorBlueprintsAdmins,
         RoyaltyParameters calldata _royaltyParameters,
-        address extraMinter
+        address extraMinter,
+        bool restrictOperators
     ) public initializer validRoyaltyParameters(_royaltyParameters) {
         // Intialize parent contracts
         ERC721Upgradeable.__ERC721_init(creatorBlueprintsInput.name, creatorBlueprintsInput.symbol);
@@ -299,6 +301,11 @@ contract CreatorBlueprints is
         asyncSaleFeesRecipient = creatorBlueprintsAdmins.asyncSaleFeesRecipient;
         contractURI = creatorBlueprintsInput.contractURI; 
         royaltyParameters = _royaltyParameters;
+
+        if (restrictOperators) {
+            operatorFilterRegistry = IOperatorFilterRegistry(0x000000000000AAeB6D7670E522A718067333cd4E);
+            operatorFilterRegistry.registerAndSubscribe(address(this), 0x3cc6CddA760b79bAfa08dF41ECFA224f810dCeB6);
+        }
     }
 
     /**
