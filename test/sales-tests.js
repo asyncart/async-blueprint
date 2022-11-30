@@ -36,7 +36,7 @@ function hashToken(account, quantity) {
   );
 }
 
-describe("Blueprint Sales", function () {
+describe.skip("Blueprint Sales", function () {
 
   let feesInput = {
     primaryFeeBPS: [],

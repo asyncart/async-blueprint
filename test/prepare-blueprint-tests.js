@@ -34,7 +34,7 @@ function hashToken(account, quantity) {
   );
 }
 
-describe("Prepare Blueprint", function () {
+describe.skip("Prepare Blueprint", function () {
   before(async function () {
     this.accounts = await ethers.getSigners();
     this.merkleTree = new MerkleTree(

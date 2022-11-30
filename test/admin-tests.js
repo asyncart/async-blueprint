@@ -8,7 +8,7 @@ const testHash = "fbejgnvnveorjgnt";
 const tenThousandPieces = 10000;
 const zero = BigNumber.from(0).toString();
 
-describe("Blueprint Supports Interface Tests", function () {
+describe.skip("Blueprint Supports Interface Tests", function () {
   let Blueprint;
   let SplitMain;
   let splitMain; 

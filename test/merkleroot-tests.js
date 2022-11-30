@@ -38,7 +38,7 @@ function hashToken(account, quantity) {
   );
 }
 
-describe("Merkleroot Tests", function () {
+describe.skip("Merkleroot Tests", function () {
 
   // whitelist mapping
   let mapping = {

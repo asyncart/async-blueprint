@@ -1,7 +1,7 @@
 const { expect } = require("chai");
 const { intToBuffer } = require("ethjs-util");
 
-describe("Admin Blueprint Tests", function () {
+describe.skip("Admin Blueprint Tests", function () {
   let Blueprint;
   let SplitMain;
   let splitMain; 

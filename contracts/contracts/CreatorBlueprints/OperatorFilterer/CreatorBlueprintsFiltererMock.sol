@@ -1,14 +1,14 @@
 //SPDX-License-Identifier: Unlicense
 pragma solidity 0.8.4;
 
-import "./abstract/HasSecondarySaleFees.sol";
-import "./common/IBlueprintTypes.sol";
+import "../../abstract/HasSecondarySaleFees.sol";
+import "../../common/IBlueprintTypes.sol";
 import "@openzeppelin/contracts-upgradeable/token/ERC721/ERC721Upgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/access/AccessControlEnumerableUpgradeable.sol";
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "@openzeppelin/contracts/utils/cryptography/MerkleProof.sol";
 import "@openzeppelin/contracts/security/ReentrancyGuard.sol";
-import {IOperatorFilterRegistry} from "./operatorFilterRegistry/IOperatorFilterRegistry.sol";
+import {IOperatorFilterRegistry} from "../operatorFilterRegistry/IOperatorFilterRegistry.sol";
 
 /**
  * @dev Async Art Blueprint NFT contract with true creator provenance
@@ -1151,10 +1151,8 @@ contract CreatorBlueprints is
     /// Required for OpenSea Operator Registry //////
     /////////////////////////////////////////////////
 
-    // Custom Error Types For Operator Registry Methods
+    // Custom Error Type For Operator Registry Methods
     error OperatorNotAllowed(address operator);
-    error OnlyOwner();
-    error ZeroAddressRegistryDisallowed();
 
     /**
      * @dev Restrict operators who are allowed to transfer these tokens
@@ -1178,29 +1176,29 @@ contract CreatorBlueprints is
      * @notice Register this contract with the OpenSea operator registry. Subscribe to OpenSea's operator blacklist.
      */
     function registerWithOpenSeaOperatorRegistry() public {
-        if (msg.sender != owner()) {
-            revert OnlyOwner();
-        }
+        require(
+            owner() == msg.sender || artist == msg.sender,
+            "unauthorized"
+        );
         IOperatorFilterRegistry registry = operatorFilterRegistry;
-        if (address(registry) == address(0)) {
-            revert ZeroAddressRegistryDisallowed();
-        }
+        require(address(registry) != address(0), "attempt register to zero addr");
         registry.registerAndSubscribe(address(this), 0x3cc6CddA760b79bAfa08dF41ECFA224f810dCeB6);
     }
 
     /**
      * @notice Update the address that the contract will make OperatorFilter checks against. When set to the zero
-     *         address, checks will be bypassed. OnlyOwner.
+     *         address, checks will be bypassed.
      */
     function updateOperatorFilterRegistryAddress(address newRegistry) public {
-        if (msg.sender != owner()) {
-            revert OnlyOwner();
-        }
+        require(
+            owner() == msg.sender || artist == msg.sender,
+            "unauthorized"
+        );
         operatorFilterRegistry = IOperatorFilterRegistry(newRegistry);
     }
 
     /**
-     * @notice Update the address that the contract will make OperatorFilter checks against. Also register this contract with that registry. OnlyOwner.
+     * @notice Update the address that the contract will make OperatorFilter checks against. Also register this contract with that registry.
      */
     function updateOperatorFilterAndRegister(address newRegistry) public {
         updateOperatorFilterRegistryAddress(newRegistry);

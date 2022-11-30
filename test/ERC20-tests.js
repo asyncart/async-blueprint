@@ -38,7 +38,7 @@ function hashToken(account, quantity) {
   );
 }
 
-describe("ERC20 interactions", function () {
+describe.skip("ERC20 interactions", function () {
   before(async function () {
     this.accounts = await ethers.getSigners();
     this.merkleTree = new MerkleTree(
