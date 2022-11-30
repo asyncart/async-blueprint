@@ -13,7 +13,8 @@ import "@openzeppelin/contracts/security/ReentrancyGuard.sol";
  * @dev Async Art Blueprint NFT contract with true creator provenance
  * @author Async Art, Ohimire Labs 
  */
-contract CreatorBlueprints is
+ // TODO: replace and rename after updating test suite to work with new contract
+contract CreatorBlueprintsOld is
     ERC721Upgradeable,
     HasSecondarySaleFees,
     AccessControlEnumerableUpgradeable,
