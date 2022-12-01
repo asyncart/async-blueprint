@@ -14,7 +14,7 @@ import {IOperatorFilterRegistry} from "../OperatorFilterer/operatorFilterRegistr
  * @dev Async Art Blueprint NFT contract with true creator provenance
  * @author Async Art, Ohimire Labs 
  */
-contract CreatorBlueprints is
+contract CreatorBlueprintsFilterer is
     ERC721Upgradeable,
     HasSecondarySaleFees,
     AccessControlEnumerableUpgradeable,
