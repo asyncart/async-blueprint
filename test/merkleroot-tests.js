@@ -101,7 +101,7 @@ describe("Merkleroot Tests", function () {
       splitMain = await SplitMain.deploy();
 
       // initialize the per creator blueprint contract
-      CreatorBlueprint = await ethers.getContractFactory("CreatorBlueprints");
+      CreatorBlueprint = await ethers.getContractFactory("contracts/contracts/CreatorBlueprints/contractVersions/CreatorBlueprints.sol:CreatorBlueprints");
       creatorBlueprint = await CreatorBlueprint.deploy();
 
       // initialize the per creator blueprint contract
@@ -202,7 +202,7 @@ describe("Merkleroot Tests", function () {
       splitMain = await SplitMain.deploy();
 
       // initialize the per creator blueprint contract
-      CreatorBlueprint = await ethers.getContractFactory("CreatorBlueprints");
+      CreatorBlueprint = await ethers.getContractFactory("contracts/contracts/CreatorBlueprints/contractVersions/CreatorBlueprints.sol:CreatorBlueprints");
       creatorBlueprint = await CreatorBlueprint.deploy();
 
       // initialize the per creator blueprint contract

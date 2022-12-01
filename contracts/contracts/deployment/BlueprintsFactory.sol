@@ -1,8 +1,8 @@
 //SPDX-License-Identifier: Unlicense
 pragma solidity 0.8.4;
 
-import "../CreatorBlueprints.sol"; 
-import "../BlueprintV12.sol"; 
+import "../CreatorBlueprints/contractVersions/CreatorBlueprints.sol";
+import "../BlueprintV12.sol";
 import "../royalties/interfaces/ISplitMain.sol";
 import "../common/IBlueprintTypes.sol";
 

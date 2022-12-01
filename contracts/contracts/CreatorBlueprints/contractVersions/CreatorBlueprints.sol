@@ -1,8 +1,8 @@
 //SPDX-License-Identifier: Unlicense
 pragma solidity 0.8.4;
 
-import "./abstract/HasSecondarySaleFees.sol";
-import "./common/IBlueprintTypes.sol";
+import "../../abstract/HasSecondarySaleFees.sol";
+import "../../common/IBlueprintTypes.sol";
 import "@openzeppelin/contracts-upgradeable/token/ERC721/ERC721Upgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/access/AccessControlEnumerableUpgradeable.sol";
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
