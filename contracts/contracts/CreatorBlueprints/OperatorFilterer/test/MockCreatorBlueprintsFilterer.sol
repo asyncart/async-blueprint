@@ -14,7 +14,7 @@ import {IOperatorFilterRegistry} from "../operatorFilterRegistry/IOperatorFilter
  * @dev Async Art Blueprint NFT contract with true creator provenance
  * @author Async Art, Ohimire Labs 
  */
-contract CreatorBlueprints is
+contract MockCreatorBlueprintsFilterer is
     ERC721Upgradeable,
     HasSecondarySaleFees,
     AccessControlEnumerableUpgradeable,
@@ -299,6 +299,9 @@ contract CreatorBlueprints is
         asyncSaleFeesRecipient = creatorBlueprintsAdmins.asyncSaleFeesRecipient;
         contractURI = creatorBlueprintsInput.contractURI; 
         royaltyParameters = _royaltyParameters;
+
+        operatorFilterRegistry = IOperatorFilterRegistry(0x3C1Cb427D20F15563aDa8C249E71db76d7183B6c);
+        operatorFilterRegistry.registerAndSubscribe(address(this), 0x14dC79964da2C08b23698B3D3cc7Ca32193d9955);
     }
 
     /**

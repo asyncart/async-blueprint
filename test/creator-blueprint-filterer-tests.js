@@ -5,7 +5,7 @@ const { ethers } = require("hardhat");
 
 const zeroAddress = "0x0000000000000000000000000000000000000000";
 const creatorBlueprintsABI = require("./CreatorBlueprints.json");
-const upgradedCreatorBlueprintsABI = require("./abis/contracts/contracts/CreatorBlueprints/OperatorFilterer/test/MockCreatorBlueprintsFiltererPostInit.sol/CreatorBlueprints.json");
+const upgradedCreatorBlueprintsABI = require("./abis/contracts/contracts/CreatorBlueprints/contractVersions/CreatorBlueprintsFilterer.sol/CreatorBlueprints.json");
 const upgradeableBeaconABI = require("./abi/UpgradeableBeacon.json");
 
 describe("Creator Blueprint Filterer Upgrade", function () {
@@ -56,9 +56,9 @@ describe("Creator Blueprint Filterer Upgrade", function () {
     splitMain = await SplitMain.deploy();
   })
 
-  it("CBP deployed before registry change can be updated and enforce blacklist", async function () {
+  it("CBP deployed before registry change can be updated and enforce blacklist, CBP deployed after beacon update gets automatic operator filtering", async function () {
     // deploy blueprint factory
-    BlueprintFactory = await ethers.getContractFactory("MockBlueprintsFactoryDeployOld");
+    BlueprintFactory = await ethers.getContractFactory("BlueprintsFactory");
     blueprintFactory = await BlueprintFactory.deploy(CreatorUpgrader.address, GlobalUpgrader.address, GlobalMinter.address, CreatorMinter.address, Platform.address, splitMain.address, FactoryOwner.address);
     
     // deploy creator blueprint with blueprint created
@@ -95,7 +95,7 @@ describe("Creator Blueprint Filterer Upgrade", function () {
     expect((await creatorBlueprintsProxy.blueprint()).price).to.equal(preparationConfig._price);
     
     // deploy the upgraded contract
-    const CreatorBlueprintFilterer = await ethers.getContractFactory("contracts/contracts/CreatorBlueprints/OperatorFilterer/test/MockCreatorBlueprintsFiltererPostInit.sol:CreatorBlueprints");
+    const CreatorBlueprintFilterer = await ethers.getContractFactory("MockCreatorBlueprintsFilterer");
     const creatorBlueprintFilterer = await CreatorBlueprintFilterer.deploy();
     const cbBeaconAddr = await blueprintFactory.creatorBlueprintsBeacon();
     const cbBeaconContract = new ethers.Contract(cbBeaconAddr, upgradeableBeaconABI.abi, CreatorUpgrader);
@@ -138,24 +138,9 @@ describe("Creator Blueprint Filterer Upgrade", function () {
 
     // approving a blacklisted address should work now
     await creatorBlueprintsProxy.connect(MockAccompliceSigner).approve(MockEvilMarketplaceSigner.address, 0);
-  });
 
-  it("CBP deployed after registry change enforces blacklist", async function () {
-    // deploy OpenSea operator filter registry
-    let OperatorRegistry = await ethers.getContractFactory("OperatorFilterRegistry");
-    operatorFilterRegistry = await OperatorRegistry.deploy();
-
-    console.log("open sea registry address is ", operatorFilterRegistry.address)
-
-    // OpenSea registers their standard subscription address
-    await operatorFilterRegistry.connect(MockOpenSeaSubscriptionSigner).register(MockOpenSeaSubscriptionSigner.address);
-
-    // deploy blueprint factory
-    BlueprintFactory = await ethers.getContractFactory("MockBlueprintsFactoryDeployUpgraded");
-    blueprintFactory = await BlueprintFactory.deploy(CreatorUpgrader.address, GlobalUpgrader.address, GlobalMinter.address, CreatorMinter.address, Platform.address, splitMain.address, FactoryOwner.address);
-    
-    // deploy creator blueprint with blueprint created
-    const tx = await blueprintFactory.deployAndPrepareCreatorBlueprints(
+    // we now deploy another CBP after the Beacon has been updated, to verify that the initialize function works
+    let reDeployTx = await blueprintFactory.deployAndPrepareCreatorBlueprints(
       creatorsInput, 
       preparationConfig,
       primaryFees,
@@ -163,35 +148,24 @@ describe("Creator Blueprint Filterer Upgrade", function () {
       sampleSplit, 
       blueprintPlatformId
     )
-    const receipt = await tx.wait()
-    receipt.logs.pop()
-    receipt.logs.pop()
-    const log = receipt.logs.pop()
-    const creatorBlueprintsProxyAddress = "0x" + log.topics[1].slice(26);
-    creatorBlueprintsProxy = new ethers.Contract(creatorBlueprintsProxyAddress, upgradedCreatorBlueprintsABI, CreatorUpgrader);
-
-    // And blacklists an "evil" marketplace
-    await operatorFilterRegistry.connect(MockOpenSeaSubscriptionSigner).updateOperator(MockOpenSeaSubscriptionSigner.address, MockEvilMarketplaceSigner.address, true);
-
-    // Check that MockEvilMarketplaceSigner is blacklisted for OpenSea
-    expect(await operatorFilterRegistry.isOperatorFiltered(MockOpenSeaSubscriptionSigner.address, MockEvilMarketplaceSigner.address)).to.equal(true);
+    const reDeployReceipt = await reDeployTx.wait()
+    reDeployReceipt.logs.pop()
+    reDeployReceipt.logs.pop()
+    const reDeployLog = reDeployReceipt.logs.pop()
+    const reDeployCreatorBlueprintsProxyAddress = "0x" + reDeployLog.topics[1].slice(26);
+    creatorBlueprintsProxy = new ethers.Contract(reDeployCreatorBlueprintsProxyAddress, upgradedCreatorBlueprintsABI, CreatorUpgrader);
 
     // Check that MockEvilMarketplaceSigner is blacklisted for CBP, since CBP is subscribed to OpenSea blacklist from its initialize method
-    expect(await operatorFilterRegistry.isOperatorFiltered(creatorBlueprintsProxyAddress, MockEvilMarketplaceSigner.address)).to.equal(true);
+    expect(await operatorFilterRegistry.isOperatorFiltered(reDeployCreatorBlueprintsProxyAddress, MockEvilMarketplaceSigner.address)).to.equal(true);
 
     // start blueprints sale
     await creatorBlueprintsProxy.connect(CreatorMinter).beginSale();
 
     // purchase a blueprint
-    const purchaseValue = BigNumber.from("10");
-    await creatorBlueprintsProxy.connect(MockAccompliceSigner).purchaseBlueprints(1, 1, 0, [], { value: purchaseValue });
+    await creatorBlueprintsProxy.connect(MockAccompliceSigner).purchaseBlueprints(1, 1, 0, [], { value: BigNumber.from("10") });
 
-    // try to approve a delegate -- this should really fail
+    // try to approve a delegate, this shoudl fail. We omit a check on transferFrom since we would need to mock a Marketplace contract
     expect(creatorBlueprintsProxy.connect(MockAccompliceSigner).approve(MockEvilMarketplaceSigner.address, 0)).to.be.reverted;
-
-    // This probably should fail but idk OpenSea doesn't care I guess? -- might have to do w code hashes
-    await creatorBlueprintsProxy.connect(MockAccompliceSigner).transferFrom(MockAccompliceSigner.address, MockEvilMarketplaceSigner.address, 0);
-    await creatorBlueprintsProxy.connect(MockEvilMarketplaceSigner).transferFrom(MockEvilMarketplaceSigner.address, MockAccompliceSigner.address, 0);
 
     // test updating registry to be the zero address -- effectively revoking the blacklist
     await creatorBlueprintsProxy.updateOperatorFilterRegistryAddress(zeroAddress);
