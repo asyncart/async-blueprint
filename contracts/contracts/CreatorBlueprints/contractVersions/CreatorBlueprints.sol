@@ -8,7 +8,6 @@ import "@openzeppelin/contracts-upgradeable/access/AccessControlEnumerableUpgrad
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "@openzeppelin/contracts/utils/cryptography/MerkleProof.sol";
 import "@openzeppelin/contracts/security/ReentrancyGuard.sol";
-import {IOperatorFilterRegistry} from "../operatorFilterRegistry/IOperatorFilterRegistry.sol";
 
 /**
  * @dev Async Art Blueprint NFT contract with true creator provenance
@@ -81,12 +80,7 @@ contract CreatorBlueprints is
      * @dev A mapping from whitelisted addresses to amout of pre-sale blueprints purchased
      * @dev This is seperate from the Blueprint struct because it was introduced as part of an upgrade, and needs to be placed at the end of storage to avoid overwriting.
      */
-     mapping(address => uint32) whitelistedPurchases;
-    
-    /**
-     * @dev A registry to check for blacklisted operator addresses. Used to only permit marketplaces enforcing creator royalites if desired
-     */
-    IOperatorFilterRegistry public operatorFilterRegistry;
+     mapping(address => uint32) whitelistedPurchases; 
 
     /**
      * @dev Tracks state of Blueprint sale
@@ -299,9 +293,6 @@ contract CreatorBlueprints is
         asyncSaleFeesRecipient = creatorBlueprintsAdmins.asyncSaleFeesRecipient;
         contractURI = creatorBlueprintsInput.contractURI; 
         royaltyParameters = _royaltyParameters;
-
-        operatorFilterRegistry = IOperatorFilterRegistry(0x000000000000AAeB6D7670E522A718067333cd4E);
-        operatorFilterRegistry.registerAndSubscribe(address(this), 0x3cc6CddA760b79bAfa08dF41ECFA224f810dCeB6);
     }
 
     /**
@@ -1145,97 +1136,5 @@ contract CreatorBlueprints is
             ERC721Upgradeable.supportsInterface(interfaceId) ||
             ERC165StorageUpgradeable.supportsInterface(interfaceId) ||
             AccessControlEnumerableUpgradeable.supportsInterface(interfaceId);
-    }
-
-    /////////////////////////////////////////////////
-    /// Required for OpenSea Operator Registry //////
-    /////////////////////////////////////////////////
-
-    // Custom Error Type For Operator Registry Methods
-    error OperatorNotAllowed(address operator);
-
-    /**
-     * @dev Restrict operators who are allowed to transfer these tokens
-     */
-    modifier onlyAllowedOperator(address from) {
-        if (from != msg.sender) {
-            _checkFilterOperator(msg.sender);
-        }
-        _;
-    }
-
-    /**
-     * @dev Restrict operators who are allowed to approve transfer delegates
-     */
-    modifier onlyAllowedOperatorApproval(address operator) {
-        _checkFilterOperator(operator);
-        _;
-    }
-
-    /**
-     * @notice Register this contract with the OpenSea operator registry. Subscribe to OpenSea's operator blacklist.
-     */
-    function registerWithOpenSeaOperatorRegistry() public {
-        require(
-            owner() == msg.sender || artist == msg.sender,
-            "unauthorized"
-        );
-        IOperatorFilterRegistry registry = operatorFilterRegistry;
-        require(address(registry) != address(0), "attempt register to zero addr");
-        registry.registerAndSubscribe(address(this), 0x3cc6CddA760b79bAfa08dF41ECFA224f810dCeB6);
-    }
-
-    /**
-     * @notice Update the address that the contract will make OperatorFilter checks against. When set to the zero
-     *         address, checks will be bypassed.
-     */
-    function updateOperatorFilterRegistryAddress(address newRegistry) public {
-        require(
-            owner() == msg.sender || artist == msg.sender,
-            "unauthorized"
-        );
-        operatorFilterRegistry = IOperatorFilterRegistry(newRegistry);
-    }
-
-    /**
-     * @notice Update the address that the contract will make OperatorFilter checks against. Also register this contract with that registry.
-     */
-    function updateOperatorFilterAndRegister(address newRegistry) public {
-        updateOperatorFilterRegistryAddress(newRegistry);
-        registerWithOpenSeaOperatorRegistry();
-    }
-
-    /**
-     * @dev Check if operator can perform an action
-     */
-    function _checkFilterOperator(address operator) internal view {
-        IOperatorFilterRegistry registry = operatorFilterRegistry;
-        // Check registry code length to facilitate testing in environments without a deployed registry.
-        if (address(registry) != address(0) && address(registry).code.length > 0) {
-            if (!registry.isOperatorAllowed(address(this), operator)) {
-                revert OperatorNotAllowed(operator);
-            }
-        }
-    }
-
-    // Override 721 Methods to restrict non-royalty enforcing operators
-    function setApprovalForAll(address operator, bool approved) public override onlyAllowedOperatorApproval(operator) {
-        super.setApprovalForAll(operator, approved);
-    }
-
-    function approve(address operator, uint256 tokenId) public override onlyAllowedOperatorApproval(operator) {
-        super.approve(operator, tokenId);
-    }
-
-    function transferFrom(address from, address to, uint256 tokenId) public override onlyAllowedOperator(from) {
-        super.transferFrom(from, to, tokenId);
-    }
-
-    function safeTransferFrom(address from, address to, uint256 tokenId, bytes memory data)
-        public
-        override
-        onlyAllowedOperator(from)
-    {
-        super.safeTransferFrom(from, to, tokenId, data);
     }
 }

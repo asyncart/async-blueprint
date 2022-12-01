@@ -8,7 +8,7 @@ import "@openzeppelin/contracts-upgradeable/access/AccessControlEnumerableUpgrad
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "@openzeppelin/contracts/utils/cryptography/MerkleProof.sol";
 import "@openzeppelin/contracts/security/ReentrancyGuard.sol";
-import {IOperatorFilterRegistry} from "../operatorFilterRegistry/IOperatorFilterRegistry.sol";
+import {IOperatorFilterRegistry} from "../OperatorFilterer/operatorFilterRegistry/IOperatorFilterRegistry.sol";
 
 /**
  * @dev Async Art Blueprint NFT contract with true creator provenance

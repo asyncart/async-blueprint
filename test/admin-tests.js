@@ -8,7 +8,7 @@ const testHash = "fbejgnvnveorjgnt";
 const tenThousandPieces = 10000;
 const zero = BigNumber.from(0).toString();
 
-describe.skip("Blueprint Supports Interface Tests", function () {
+describe("Blueprint Supports Interface Tests", function () {
   let Blueprint;
   let SplitMain;
   let splitMain; 
@@ -46,7 +46,7 @@ describe.skip("Blueprint Supports Interface Tests", function () {
     splitMain = await SplitMain.deploy();
 
     // initialize the per creator blueprint contract
-    CreatorBlueprint = await ethers.getContractFactory("CreatorBlueprints");
+    CreatorBlueprint = await ethers.getContractFactory("contracts/contracts/CreatorBlueprints/contractVersions/CreatorBlueprints.sol:CreatorBlueprints");
     creatorBlueprint = await CreatorBlueprint.deploy(); 
 
     // initialize the per creator blueprint contract

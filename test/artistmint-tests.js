@@ -30,7 +30,7 @@ function hashToken(account, quantity) {
   );
 }
 
-describe.skip("Blueprint presale minting", function () {
+describe("Blueprint presale minting", function () {
   before(async function () {
     this.merkleTree = new MerkleTree(
       Object.entries(mapping).map((mapping) => hashToken(...mapping)),
@@ -76,7 +76,7 @@ describe.skip("Blueprint presale minting", function () {
       splitMain = await SplitMain.deploy();
 
       // initialize the per creator blueprint contract
-      CreatorBlueprint = await ethers.getContractFactory("contracts/contracts/CreatorBlueprints/CreatorBlueprints.sol:CreatorBlueprints");
+      CreatorBlueprint = await ethers.getContractFactory("contracts/contracts/CreatorBlueprints/contractVersions/CreatorBlueprints.sol:CreatorBlueprints");
       creatorBlueprint = await CreatorBlueprint.deploy(); 
 
       // initialize the per creator blueprint contract

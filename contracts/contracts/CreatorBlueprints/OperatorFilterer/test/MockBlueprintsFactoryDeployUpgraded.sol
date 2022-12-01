@@ -1,10 +1,10 @@
 //SPDX-License-Identifier: Unlicense
 pragma solidity 0.8.4;
 
-import "../CreatorBlueprints/contractVersions/CreatorBlueprints.sol";
-import "../BlueprintV12.sol";
-import "../royalties/interfaces/ISplitMain.sol";
-import "../common/IBlueprintTypes.sol";
+import "./MockCreatorBlueprintsFiltererInit.sol";
+import "../../../BlueprintV12.sol";
+import "../../../royalties/interfaces/ISplitMain.sol";
+import "../../../common/IBlueprintTypes.sol";
 
 import "@openzeppelin/contracts/proxy/beacon/UpgradeableBeacon.sol"; 
 import "@openzeppelin/contracts/proxy/beacon/IBeacon.sol"; 
@@ -15,7 +15,7 @@ import "@openzeppelin/contracts/proxy/transparent/TransparentUpgradeableProxy.so
  * @dev Used to deploy and configure CreatorBlueprints contracts in multiple settings
  * @author Ohimire Labs
  */
-contract BlueprintsFactory is Ownable { 
+contract MockBlueprintsFactoryDeployUpgraded is Ownable { 
     /**
      * @dev Emitted when contract is deployed, exposing Async Art system contracts deployed in the process
      * @param creatorBlueprintsImplementation Address of deployed CreatorBlueprints implementation used in beacon upgradability 

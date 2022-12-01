@@ -36,7 +36,7 @@ function hashToken(account, quantity) {
   );
 }
 
-describe.skip("Blueprint Sales", function () {
+describe("Blueprint Sales", function () {
 
   let feesInput = {
     primaryFeeBPS: [],
@@ -83,7 +83,7 @@ describe.skip("Blueprint Sales", function () {
       splitMain = await SplitMain.deploy();
 
       // initialize the per creator blueprint contract
-      CreatorBlueprint = await ethers.getContractFactory("CreatorBlueprints");
+      CreatorBlueprint = await ethers.getContractFactory("contracts/contracts/CreatorBlueprints/contractVersions/CreatorBlueprints.sol:CreatorBlueprints");
       creatorBlueprint = await CreatorBlueprint.deploy(); 
 
       // initialize the per creator blueprint contract
@@ -418,7 +418,7 @@ describe.skip("Blueprint Sales", function () {
       splitMain = await SplitMain.deploy();
 
       // initialize the per creator blueprint contract
-      CreatorBlueprint = await ethers.getContractFactory("CreatorBlueprints");
+      CreatorBlueprint = await ethers.getContractFactory("contracts/contracts/CreatorBlueprints/contractVersions/CreatorBlueprints.sol:CreatorBlueprints");
       creatorBlueprint = await CreatorBlueprint.deploy(); 
 
       // initialize the per creator blueprint contract
@@ -530,7 +530,7 @@ describe.skip("Blueprint Sales", function () {
       splitMain = await SplitMain.deploy();
 
       // initialize the per creator blueprint contract
-      CreatorBlueprint = await ethers.getContractFactory("CreatorBlueprints");
+      CreatorBlueprint = await ethers.getContractFactory("contracts/contracts/CreatorBlueprints/contractVersions/CreatorBlueprints.sol:CreatorBlueprints");
       creatorBlueprint = await CreatorBlueprint.deploy(); 
 
       // initialize the per creator blueprint contract

@@ -6,6 +6,7 @@ require("hardhat-deploy");
 require("@nomiclabs/hardhat-ethers");
 require("@openzeppelin/hardhat-upgrades");
 require('hardhat-contract-sizer');
+require('hardhat-abi-exporter');
 
 const {
   evmPrivateKey,
@@ -65,5 +66,13 @@ module.exports = {
   },
   contractSizer: {
     runOnCompile: true
+  },
+  abiExporter: {
+    path: './test/abis',
+    runOnCompile: true,
+    clear: true,
+    flat: false,
+    only: [':CreatorBlueprints$'],
+    spacing: 2
   }
 };

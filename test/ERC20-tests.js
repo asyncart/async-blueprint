@@ -38,7 +38,7 @@ function hashToken(account, quantity) {
   );
 }
 
-describe.skip("ERC20 interactions", function () {
+describe("ERC20 interactions", function () {
   before(async function () {
     this.accounts = await ethers.getSigners();
     this.merkleTree = new MerkleTree(
@@ -89,7 +89,7 @@ describe.skip("ERC20 interactions", function () {
       splitMain = await SplitMain.deploy();
 
       // initialize the per creator blueprint contract
-      CreatorBlueprint = await ethers.getContractFactory("CreatorBlueprints");
+      CreatorBlueprint = await ethers.getContractFactory("contracts/contracts/CreatorBlueprints/contractVersions/CreatorBlueprints.sol:CreatorBlueprints");
       creatorBlueprint = await CreatorBlueprint.deploy(); 
 
       // deploy erc20 mock
