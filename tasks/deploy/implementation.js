@@ -1,5 +1,6 @@
 const { task } = require("hardhat/config");
 const creatorBlueprintsABI = require("../../test/abis/contracts/contracts/CreatorBlueprints/contractVersions/CreatorBlueprints.sol/CreatorBlueprints.json");
+const blueprintV12ABI = require("../../test/BlueprintV12.json")
 const BlueprintsFactoryABI = [
   {
       "inputs": [],
@@ -221,6 +222,7 @@ task("cb:encoded-initialize", "Log the encoded call to initialize")
       await cb.contractURI(),
       await cb.artist()
     ]
+    console.log(creatorBlueprintsInput)
     const defaultCreatorBlueprintsAdmins = await factory.defaultCreatorBlueprintsAdmins()
     const royaltyParameters = await cb.royaltyParameters()
     
@@ -229,6 +231,29 @@ task("cb:encoded-initialize", "Log the encoded call to initialize")
       defaultCreatorBlueprintsAdmins,
       royaltyParameters,
       ethers.constants.AddressZero // extra minter
+    ])
+
+    console.log(functionData)
+  });
+
+  task("v12:encoded-initialize", "Log the encoded call to initialize")
+  .addParam("proxy", "Address of a BlueprintV12 proxy")
+  .addParam("factory", "Address of BlueprintsFactory")
+  .setAction(async (taskArgs, { ethers }) => {
+    const signers = await ethers.getSigners();
+    const v12 = new ethers.Contract(taskArgs.proxy, blueprintV12ABI.abi, signers[0]); 
+    const factory = new ethers.Contract(taskArgs.factory, BlueprintsFactoryABI, signers[0]); 
+
+    const name = await v12.name()
+    const symbol = await v12.symbol()
+    const defaultBlueprintV12Admins = await factory.defaultBlueprintV12Admins()
+    const splitMain = "0x2ed6c4B5dA6378c7897AC67Ba9e43102Feb694EE"
+    
+    const functionData = v12.interface.encodeFunctionData("initialize", [
+      name,
+      symbol,
+      defaultBlueprintV12Admins,
+      splitMain
     ])
 
     console.log(functionData)
