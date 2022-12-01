@@ -5,7 +5,7 @@ const { ethers } = require("hardhat");
 
 const zeroAddress = "0x0000000000000000000000000000000000000000";
 const creatorBlueprintsABI = require("./CreatorBlueprints.json");
-const upgradedCreatorBlueprintsABI = require("./abis/contracts/contracts/CreatorBlueprints/contractVersions/CreatorBlueprintsFilterer.sol/CreatorBlueprints.json");
+const upgradedCreatorBlueprintsABI = require("./abis/contracts/contracts/CreatorBlueprints/contractVersions/CreatorBlueprintsFilterer.sol/CreatorBlueprintsFilterer.json");
 const upgradeableBeaconABI = require("./abi/UpgradeableBeacon.json");
 
 describe("Creator Blueprint Filterer Upgrade", function () {

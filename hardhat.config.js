@@ -72,7 +72,7 @@ module.exports = {
     runOnCompile: true,
     clear: true,
     flat: false,
-    only: [':CreatorBlueprints$'],
+    only: [':CreatorBlueprints$', ':CreatorBlueprintsFilterer$'],
     spacing: 2
   }
 };
