@@ -1,3 +1,3 @@
 require("./blueprintsFactory");
 require("./splitMain");
-require("./cbImplementation");
+require("./implementation");

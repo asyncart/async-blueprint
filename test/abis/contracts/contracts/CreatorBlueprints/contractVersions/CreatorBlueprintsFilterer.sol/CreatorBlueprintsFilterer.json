@@ -473,7 +473,7 @@
         "type": "bytes32"
       },
       {
-        "internalType": "enum CreatorBlueprints.SaleState",
+        "internalType": "enum CreatorBlueprintsFilterer.SaleState",
         "name": "saleState",
         "type": "uint8"
       },
@@ -749,7 +749,7 @@
             "type": "address"
           }
         ],
-        "internalType": "struct CreatorBlueprints.CreatorBlueprintsInput",
+        "internalType": "struct CreatorBlueprintsFilterer.CreatorBlueprintsInput",
         "name": "creatorBlueprintsInput",
         "type": "tuple"
       },
@@ -788,7 +788,7 @@
             "type": "uint32"
           }
         ],
-        "internalType": "struct CreatorBlueprints.RoyaltyParameters",
+        "internalType": "struct CreatorBlueprintsFilterer.RoyaltyParameters",
         "name": "_royaltyParameters",
         "type": "tuple"
       },
@@ -1496,7 +1496,7 @@
             "type": "uint32"
           }
         ],
-        "internalType": "struct CreatorBlueprints.RoyaltyParameters",
+        "internalType": "struct CreatorBlueprintsFilterer.RoyaltyParameters",
         "name": "_royaltyParameters",
         "type": "tuple"
       }
