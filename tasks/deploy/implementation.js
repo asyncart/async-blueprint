@@ -197,6 +197,17 @@ task("deploy:cbImplementation-operator-filterer", "Deploys CreatorBlueprintsFilt
     console.log(`CreatorBlueprintsFilterer deployed to: ${creatorBlueprintsFilterer.address}`) 
   });
 
+task("deploy:cbImplementation-ownership-transferred", "Deploys CreatorBlueprintsFilterer implementation")
+  .setAction(async (taskArgs, { ethers }) => {
+    const CreatorBlueprintsOwnershipTransferred = await ethers.getContractFactory("CreatorBlueprintsOwnershipTransferred");
+    const creatorBlueprintsOwnershipTransferred = await CreatorBlueprintsOwnershipTransferred.deploy();
+    console.log(creatorBlueprintsOwnershipTransferred.deployTransaction.hash)
+
+    await creatorBlueprintsOwnershipTransferred.deployed();
+
+    console.log(`CreatorBlueprintsOwnershipTransferred deployed to: ${creatorBlueprintsOwnershipTransferred.address}`) 
+  });
+
 task("deploy:v12Implementation", "Deploys BlueprintV12 implementation")
   .setAction(async (taskArgs, { ethers }) => {
     const BlueprintV12 = await ethers.getContractFactory("BlueprintV12");
